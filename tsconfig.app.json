@@ -6,13 +6,14 @@
     "module": "ESNext",
     "skipLibCheck": true,
 
-    /* 🔥 IMPORTANT FIX */
+    /* 🔥 FIX */
     "baseUrl": ".",
+    "ignoreDeprecations": "6.0",
+
     "paths": {
       "@/*": ["src/*"]
     },
 
-    /* Optional (fix many errors fast) */
     "strict": false,
 
     "moduleResolution": "bundler",
