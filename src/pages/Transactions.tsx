@@ -68,7 +68,7 @@ export default function Transactions() {
       if (filterAccount !== 'all' && t.accountId !== filterAccount) return false;
       if (search) {
         const q = search.toLowerCase();
-        return t.category.toLowerCase().includes(q) || (t.note || '').toLowerCase().includes(q) || (getAccount(t.accountId)?.name || '').toLowerCase().includes(q);
+        return t.description.toLowerCase().includes(q) || (getAccount(t.accountId)?.name || '').toLowerCase().includes(q);
       }
       return true;
     })
@@ -261,16 +261,13 @@ export default function Transactions() {
                 </div>
                 <div className="flex-1 min-w-0 flex flex-col justify-center">
                   <div className="flex items-center gap-2 mb-0.5">
-                    <p className="text-sm font-semibold text-foreground truncate">{tx.category}</p>
+                    <p className="text-sm font-semibold text-foreground truncate">{tx.description}</p>
                     {account?.name && (
                       <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-secondary text-secondary-foreground shrink-0 leading-none">
                         {account.name}
                       </span>
                     )}
                   </div>
-                  {tx.note && (
-                    <p className="text-[13px] text-muted-foreground truncate mb-0.5">{tx.note}</p>
-                  )}
                   <p className="text-[11px] font-medium text-muted-foreground/70 uppercase tracking-wider">
                     {format(new Date(tx.date + 'T00:00:00'), 'd MMM yyyy')}
                   </p>

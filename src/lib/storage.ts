@@ -13,10 +13,9 @@ export interface Transaction {
   id: string;
   type: 'income' | 'expense';
   amount: number;
-  category: string;
+  description: string;
   accountId: string;
   date: string;
-  note?: string;
   createdAt: string;
 }
 
@@ -65,6 +64,7 @@ function getItem<T>(key: string): T[] {
 
 function setItem<T>(key: string, data: T[]): void {
   localStorage.setItem(key, JSON.stringify(data));
+  window.dispatchEvent(new Event('cashbook_storage_update'));
 }
 
 export const storage = {
@@ -152,13 +152,13 @@ export function seedDefaultData() {
   const d3 = fmt(new Date(now.getTime() - 3 * 86400000));
 
   const transactions: Transaction[] = [
-    { id: generateId(), type: 'income', amount: 45000, category: 'Salary', accountId: accountId2, date: d3, note: 'Monthly salary', createdAt: new Date(now.getTime() - 3 * 86400000).toISOString() },
-    { id: generateId(), type: 'expense', amount: 800, category: 'Food', accountId: accountId1, date: d2, note: 'Groceries', createdAt: new Date(now.getTime() - 2 * 86400000).toISOString() },
-    { id: generateId(), type: 'expense', amount: 1500, category: 'Transport', accountId: accountId2, date: d2, note: 'Monthly bus pass', createdAt: new Date(now.getTime() - 2 * 86400000 + 1000).toISOString() },
-    { id: generateId(), type: 'income', amount: 2000, category: 'Freelance', accountId: accountId2, date: d1, note: 'Design project', createdAt: new Date(now.getTime() - 86400000).toISOString() },
-    { id: generateId(), type: 'expense', amount: 350, category: 'Food', accountId: accountId3, date: d1, note: 'Dinner', createdAt: new Date(now.getTime() - 86400000 + 1000).toISOString() },
-    { id: generateId(), type: 'expense', amount: 200, category: 'Entertainment', accountId: accountId1, date: d0, note: 'Movie tickets', createdAt: now.toISOString() },
-    { id: generateId(), type: 'income', amount: 500, category: 'Other', accountId: accountId1, date: d0, note: 'Cash from family', createdAt: new Date(now.getTime() + 1000).toISOString() },
+    { id: generateId(), type: 'income', amount: 45000, description: 'Monthly salary', accountId: accountId2, date: d3, createdAt: new Date(now.getTime() - 3 * 86400000).toISOString() },
+    { id: generateId(), type: 'expense', amount: 800, description: 'Groceries', accountId: accountId1, date: d2, createdAt: new Date(now.getTime() - 2 * 86400000).toISOString() },
+    { id: generateId(), type: 'expense', amount: 1500, description: 'Monthly bus pass', accountId: accountId2, date: d2, createdAt: new Date(now.getTime() - 2 * 86400000 + 1000).toISOString() },
+    { id: generateId(), type: 'income', amount: 2000, description: 'Design project', accountId: accountId2, date: d1, createdAt: new Date(now.getTime() - 86400000).toISOString() },
+    { id: generateId(), type: 'expense', amount: 350, description: 'Dinner', accountId: accountId3, date: d1, createdAt: new Date(now.getTime() - 86400000 + 1000).toISOString() },
+    { id: generateId(), type: 'expense', amount: 200, description: 'Movie tickets', accountId: accountId1, date: d0, createdAt: now.toISOString() },
+    { id: generateId(), type: 'income', amount: 500, description: 'Cash from family', accountId: accountId1, date: d0, createdAt: new Date(now.getTime() + 1000).toISOString() },
   ];
 
   const notes: Note[] = [
@@ -178,5 +178,3 @@ export function seedDefaultData() {
   storage.setInitialized();
 }
 
-export const INCOME_CATEGORIES = ['Salary', 'Freelance', 'Business', 'Investment', 'Gift', 'Rental', 'Other'];
-export const EXPENSE_CATEGORIES = ['Food', 'Transport', 'Shopping', 'Entertainment', 'Health', 'Education', 'Rent', 'Utilities', 'Other'];

@@ -1,5 +1,5 @@
 import { useLocation, Link } from "wouter";
-import { LayoutDashboard, ArrowLeftRight, Plus, Wallet, StickyNote, Calculator, Settings } from "lucide-react";
+import { LayoutDashboard, ArrowLeftRight, Plus, Wallet, StickyNote, Calculator, Settings, Banknote } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface LayoutProps {
@@ -24,10 +24,7 @@ export default function Layout({ children }: LayoutProps) {
       <aside className="hidden md:flex flex-col w-60 border-r border-sidebar-border bg-sidebar shrink-0">
         <div className="flex items-center gap-3 px-5 py-5 border-b border-sidebar-border">
           <div className="w-9 h-9 rounded-xl bg-primary flex items-center justify-center shrink-0">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M20 7H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2Z" />
-              <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
-            </svg>
+            <Banknote className="w-5 h-5 text-white" />
           </div>
           <div>
             <h1 className="font-bold text-base text-sidebar-foreground leading-tight">CashBook</h1>

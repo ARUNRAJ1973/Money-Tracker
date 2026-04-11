@@ -37,11 +37,17 @@ export default function Dashboard() {
   const [currency, setCurrency] = useState('₹');
   const [period, setPeriod] = useState<FilterPeriod>("day");
 
-  useEffect(() => {
+  const load = () => {
     const s = storage.getSettings();
     setCurrency(s.currency || '₹');
     setAccounts(storage.getAccounts());
     setTransactions(storage.getTransactions());
+  };
+
+  useEffect(() => {
+    load();
+    window.addEventListener('cashbook_storage_update', load);
+    return () => window.removeEventListener('cashbook_storage_update', load);
   }, []);
 
   const totalBalance = accounts.reduce((s, a) => s + a.balance, 0);
@@ -192,7 +198,7 @@ export default function Dashboard() {
                     }
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-foreground truncate">{tx.category}</p>
+                    <p className="text-sm font-medium text-foreground truncate">{tx.description}</p>
                     <p className="text-xs text-muted-foreground">{account?.name} · {format(new Date(tx.date), 'd MMM yyyy')}</p>
                   </div>
                   <p className={`text-sm font-semibold ${tx.type === 'income' ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'}`}>

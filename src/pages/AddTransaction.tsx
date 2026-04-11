@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useLocation, useRoute } from "wouter";
 import { ArrowLeft } from "lucide-react";
-import { storage, generateId, INCOME_CATEGORIES, EXPENSE_CATEGORIES, type Account } from "@/lib/storage";
+import { storage, generateId, type Account } from "@/lib/storage";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,11 +18,9 @@ export default function AddTransaction() {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [type, setType] = useState<'income' | 'expense'>('expense');
   const [amount, setAmount] = useState('');
-  const [category, setCategory] = useState('');
-  const [customCategory, setCustomCategory] = useState('');
+  const [description, setDescription] = useState('');
   const [accountId, setAccountId] = useState('');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
-  const [note, setNote] = useState('');
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -35,19 +33,9 @@ export default function AddTransaction() {
       if (txToEdit) {
         setType(txToEdit.type);
         setAmount(txToEdit.amount.toString());
-        const isStandardCat = txToEdit.type === 'income' 
-          ? INCOME_CATEGORIES.includes(txToEdit.category)
-          : EXPENSE_CATEGORIES.includes(txToEdit.category);
-        
-        if (isStandardCat) {
-          setCategory(txToEdit.category);
-        } else {
-          setCategory('__custom__');
-          setCustomCategory(txToEdit.category);
-        }
+        setDescription(txToEdit.description);
         setAccountId(txToEdit.accountId);
         setDate(txToEdit.date);
-        setNote(txToEdit.note || '');
       } else {
         toast({ title: 'Transaction not found', variant: 'destructive' });
         setLocation('/transactions');
@@ -57,9 +45,6 @@ export default function AddTransaction() {
     }
   }, [editId]);
 
-  const categories = type === 'income' ? INCOME_CATEGORIES : EXPENSE_CATEGORIES;
-  const finalCategory = category === '__custom__' ? customCategory : category;
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const num = parseFloat(amount);
@@ -67,8 +52,8 @@ export default function AddTransaction() {
       toast({ title: 'Invalid amount', description: 'Please enter a valid amount', variant: 'destructive' });
       return;
     }
-    if (!finalCategory) {
-      toast({ title: 'Category required', description: 'Please select a category', variant: 'destructive' });
+    if (!description.trim()) {
+      toast({ title: 'Description required', description: 'Please enter a description', variant: 'destructive' });
       return;
     }
     if (!accountId) {
@@ -105,10 +90,9 @@ export default function AddTransaction() {
           ...oldTx,
           type,
           amount: num,
-          category: finalCategory,
+          description: description.trim(),
           accountId,
           date,
-          note: note.trim() || undefined,
         };
         txs[oldTxIndex] = updatedTx;
         storage.setTransactions(txs);
@@ -119,10 +103,9 @@ export default function AddTransaction() {
         id: generateId(),
         type,
         amount: num,
-        category: finalCategory,
+        description: description.trim(),
         accountId,
         date,
-        note: note.trim() || undefined,
         createdAt: new Date().toISOString(),
       };
 
@@ -159,7 +142,7 @@ export default function AddTransaction() {
         <div className="bg-muted rounded-2xl p-1 flex gap-1">
           <button
             type="button"
-            onClick={() => { setType('expense'); setCategory(''); }}
+            onClick={() => { setType('expense'); }}
             className={cn("flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all", type === 'expense' ? 'bg-red-500 text-white shadow-sm' : 'text-muted-foreground hover:text-foreground')}
             data-testid="type-expense"
           >
@@ -167,7 +150,7 @@ export default function AddTransaction() {
           </button>
           <button
             type="button"
-            onClick={() => { setType('income'); setCategory(''); }}
+            onClick={() => { setType('income'); }}
             className={cn("flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all", type === 'income' ? 'bg-green-500 text-white shadow-sm' : 'text-muted-foreground hover:text-foreground')}
             data-testid="type-income"
           >
@@ -191,28 +174,16 @@ export default function AddTransaction() {
           />
         </div>
 
-        {/* Category */}
+        {/* Description */}
         <div className="space-y-1.5">
-          <Label>Category</Label>
-          <Select value={category} onValueChange={setCategory}>
-            <SelectTrigger data-testid="select-category">
-              <SelectValue placeholder="Select category" />
-            </SelectTrigger>
-            <SelectContent>
-              {categories.map(c => (
-                <SelectItem key={c} value={c}>{c}</SelectItem>
-              ))}
-              <SelectItem value="__custom__">Custom...</SelectItem>
-            </SelectContent>
-          </Select>
-          {category === '__custom__' && (
-            <Input
-              placeholder="Enter custom category"
-              value={customCategory}
-              onChange={e => setCustomCategory(e.target.value)}
-              data-testid="input-custom-category"
-            />
-          )}
+          <Label htmlFor="description">Description</Label>
+          <Input
+            id="description"
+            placeholder="e.g. Salary, Groceries"
+            value={description}
+            onChange={e => setDescription(e.target.value)}
+            data-testid="input-description"
+          />
         </div>
 
         {/* Account */}
@@ -242,18 +213,7 @@ export default function AddTransaction() {
           />
         </div>
 
-        {/* Note */}
-        <div className="space-y-1.5">
-          <Label htmlFor="note">Note (optional)</Label>
-          <Textarea
-            id="note"
-            placeholder="Add a note..."
-            value={note}
-            onChange={e => setNote(e.target.value)}
-            rows={2}
-            data-testid="input-note"
-          />
-        </div>
+
 
         <Button type="submit" className="w-full h-12 text-base font-semibold" disabled={loading} data-testid="submit-transaction">
           {loading ? 'Saving...' : editId ? 'Update Transaction' : 'Save Transaction'}
