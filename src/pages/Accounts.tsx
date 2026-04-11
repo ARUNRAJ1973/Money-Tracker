@@ -106,7 +106,7 @@ export default function Accounts() {
   // Account detail helpers
   const accountTxs = detailAccount
     ? [...transactions.filter(t => t.accountId === detailAccount.id)]
-        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
     : [];
   const detailIncome = accountTxs.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
   const detailExpense = accountTxs.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
@@ -245,10 +245,11 @@ export default function Accounts() {
                             : <ArrowDownCircle className="w-4 h-4 text-red-500 dark:text-red-400" />
                           }
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-foreground truncate">{tx.category}</p>
-                          {tx.note && <p className="text-xs text-muted-foreground truncate">{tx.note}</p>}
-                          <p className="text-xs text-muted-foreground">{format(new Date(tx.date), 'd MMM yyyy')}</p>
+                        <div className="flex-1 min-w-0 flex flex-col justify-center">
+                          <p className="text-sm font-semibold text-foreground truncate">{tx.description}</p>
+                          <p className="text-[11px] font-medium text-muted-foreground/70 uppercase tracking-wider">
+                            {format(new Date(tx.date + 'T00:00:00'), 'd MMM yyyy')}
+                          </p>
                         </div>
                         <p className={`text-sm font-semibold shrink-0 ${tx.type === 'income' ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'}`}>
                           {tx.type === 'income' ? '+' : '-'}{formatCurrency(tx.amount, currency)}
