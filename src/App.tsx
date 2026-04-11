@@ -24,6 +24,7 @@ function AppRoutes() {
         <Route path="/" component={Dashboard} />
         <Route path="/transactions" component={Transactions} />
         <Route path="/add-transaction" component={AddTransaction} />
+        <Route path="/edit-transaction/:id" component={AddTransaction} />
         <Route path="/accounts" component={Accounts} />
         <Route path="/notes" component={Notes} />
         <Route path="/calculator" component={Calculator} />

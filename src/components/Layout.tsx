@@ -9,7 +9,7 @@ interface LayoutProps {
 const navItems = [
   { path: '/', icon: LayoutDashboard, label: 'Dashboard' },
   { path: '/transactions', icon: ArrowLeftRight, label: 'Transactions' },
-  { path: '/accounts', icon: Wallet, label: 'Accounts' },
+  // { path: '/accounts', icon: Wallet, label: 'Accounts' },
   { path: '/notes', icon: StickyNote, label: 'Notes' },
   { path: '/calculator', icon: Calculator, label: 'Calculator' },
   { path: '/settings', icon: Settings, label: 'Settings' },
@@ -25,8 +25,8 @@ export default function Layout({ children }: LayoutProps) {
         <div className="flex items-center gap-3 px-5 py-5 border-b border-sidebar-border">
           <div className="w-9 h-9 rounded-xl bg-primary flex items-center justify-center shrink-0">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M20 7H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2Z"/>
-              <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>
+              <path d="M20 7H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2Z" />
+              <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
             </svg>
           </div>
           <div>
@@ -44,7 +44,7 @@ export default function Layout({ children }: LayoutProps) {
                 href={path}
                 data-testid={`nav-${label.toLowerCase()}`}
                 className={cn(
-                  "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150",
+                  "flex items-center rounded-xl text-sm font-medium transition-all duration-150",
                   isActive
                     ? "bg-primary text-primary-foreground shadow-sm"
                     : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
@@ -93,7 +93,7 @@ export default function Layout({ children }: LayoutProps) {
             </Link>
           );
         })}
-        <Link
+        {/* <Link
           href="/settings"
           data-testid="mobile-nav-settings"
           className={cn(
@@ -103,17 +103,17 @@ export default function Layout({ children }: LayoutProps) {
         >
           <Settings className={cn("w-5 h-5", location === '/settings' && "stroke-[2.5]")} />
           <span className="text-[10px] font-medium">Settings</span>
-        </Link>
+        </Link> */}
       </nav>
 
       {/* Mobile FAB */}
-      <Link
+      {/* <Link
         href="/add-transaction"
         className="md:hidden fixed bottom-20 right-5 w-14 h-14 bg-primary text-primary-foreground rounded-2xl flex items-center justify-center shadow-xl z-50 active:scale-95 transition-transform"
         data-testid="fab-add-transaction"
       >
         <Plus className="w-6 h-6" />
-      </Link>
+      </Link> */}
     </div>
   );
 }

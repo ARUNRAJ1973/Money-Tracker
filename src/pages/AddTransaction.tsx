@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useLocation } from "wouter";
+import { useLocation, useRoute } from "wouter";
 import { ArrowLeft } from "lucide-react";
 import { storage, generateId, INCOME_CATEGORIES, EXPENSE_CATEGORIES, type Account } from "@/lib/storage";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,8 @@ import { cn } from "@/lib/utils";
 
 export default function AddTransaction() {
   const [, setLocation] = useLocation();
+  const [match, params] = useRoute<{id: string}>("/edit-transaction/:id");
+  const editId = match && params ? params.id : null;
   const { toast } = useToast();
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [type, setType] = useState<'income' | 'expense'>('expense');
@@ -26,8 +28,34 @@ export default function AddTransaction() {
   useEffect(() => {
     const accts = storage.getAccounts();
     setAccounts(accts);
-    if (accts.length > 0) setAccountId(accts[0].id);
-  }, []);
+    
+    if (editId) {
+      const txs = storage.getTransactions();
+      const txToEdit = txs.find(t => t.id === editId);
+      if (txToEdit) {
+        setType(txToEdit.type);
+        setAmount(txToEdit.amount.toString());
+        const isStandardCat = txToEdit.type === 'income' 
+          ? INCOME_CATEGORIES.includes(txToEdit.category)
+          : EXPENSE_CATEGORIES.includes(txToEdit.category);
+        
+        if (isStandardCat) {
+          setCategory(txToEdit.category);
+        } else {
+          setCategory('__custom__');
+          setCustomCategory(txToEdit.category);
+        }
+        setAccountId(txToEdit.accountId);
+        setDate(txToEdit.date);
+        setNote(txToEdit.note || '');
+      } else {
+        toast({ title: 'Transaction not found', variant: 'destructive' });
+        setLocation('/transactions');
+      }
+    } else {
+      if (accts.length > 0) setAccountId(accts[0].id);
+    }
+  }, [editId]);
 
   const categories = type === 'income' ? INCOME_CATEGORIES : EXPENSE_CATEGORIES;
   const finalCategory = category === '__custom__' ? customCategory : category;
@@ -49,31 +77,68 @@ export default function AddTransaction() {
     }
 
     setLoading(true);
-    const newTx = {
-      id: generateId(),
-      type,
-      amount: num,
-      category: finalCategory,
-      accountId,
-      date,
-      note: note.trim() || undefined,
-      createdAt: new Date().toISOString(),
-    };
-
     const txs = storage.getTransactions();
-    storage.setTransactions([...txs, newTx]);
-
     const accts = storage.getAccounts();
-    const updated = accts.map(a => {
-      if (a.id !== accountId) return a;
-      return {
-        ...a,
-        balance: type === 'income' ? a.balance + num : a.balance - num,
-      };
-    });
-    storage.setAccounts(updated);
 
-    toast({ title: 'Transaction added!' });
+    if (editId) {
+      const oldTxIndex = txs.findIndex(t => t.id === editId);
+      if (oldTxIndex >= 0) {
+        const oldTx = txs[oldTxIndex];
+        
+        let updatedAccounts = accts.map(a => {
+          if (a.id === oldTx.accountId) {
+             return { ...a, balance: oldTx.type === 'income' ? a.balance - oldTx.amount : a.balance + oldTx.amount };
+          }
+          return a;
+        });
+
+        updatedAccounts = updatedAccounts.map(a => {
+           if (a.id === accountId) {
+             return { ...a, balance: type === 'income' ? a.balance + num : a.balance - num };
+           }
+           return a;
+        });
+
+        storage.setAccounts(updatedAccounts);
+
+        const updatedTx = {
+          ...oldTx,
+          type,
+          amount: num,
+          category: finalCategory,
+          accountId,
+          date,
+          note: note.trim() || undefined,
+        };
+        txs[oldTxIndex] = updatedTx;
+        storage.setTransactions(txs);
+        toast({ title: 'Transaction updated!' });
+      }
+    } else {
+      const newTx = {
+        id: generateId(),
+        type,
+        amount: num,
+        category: finalCategory,
+        accountId,
+        date,
+        note: note.trim() || undefined,
+        createdAt: new Date().toISOString(),
+      };
+
+      storage.setTransactions([...txs, newTx]);
+
+      const updatedAccounts = accts.map(a => {
+        if (a.id !== accountId) return a;
+        return {
+          ...a,
+          balance: type === 'income' ? a.balance + num : a.balance - num,
+        };
+      });
+      storage.setAccounts(updatedAccounts);
+      toast({ title: 'Transaction added!' });
+    }
+
     setTimeout(() => {
       setLoading(false);
       setLocation('/transactions');
@@ -86,7 +151,7 @@ export default function AddTransaction() {
         <button onClick={() => setLocation('/')} className="w-9 h-9 rounded-xl bg-muted flex items-center justify-center hover:bg-accent transition-colors">
           <ArrowLeft className="w-4 h-4" />
         </button>
-        <h1 className="text-xl font-bold text-foreground">Add Transaction</h1>
+        <h1 className="text-xl font-bold text-foreground">{editId ? 'Edit Transaction' : 'Add Transaction'}</h1>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-5">
@@ -191,7 +256,7 @@ export default function AddTransaction() {
         </div>
 
         <Button type="submit" className="w-full h-12 text-base font-semibold" disabled={loading} data-testid="submit-transaction">
-          {loading ? 'Saving...' : 'Save Transaction'}
+          {loading ? 'Saving...' : editId ? 'Update Transaction' : 'Save Transaction'}
         </Button>
       </form>
     </div>
