@@ -43,7 +43,7 @@ export default function MpinLock({ mpin, onUnlock }: MpinLockProps) {
               <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
             </svg>
           </div>
-          <h1 className="text-2xl font-bold text-foreground">CashBook</h1>
+          <h1 className="text-2xl font-bold text-foreground">FinTrack</h1>
           <p className="text-muted-foreground text-sm">Enter your PIN to unlock</p>
         </div>
 

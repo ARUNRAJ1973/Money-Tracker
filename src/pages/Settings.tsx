@@ -86,7 +86,7 @@ export default function Settings() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `cashbook-backup-${new Date().toISOString().split('T')[0]}.json`;
+    a.download = `fintrack-backup-${new Date().toISOString().split('T')[0]}.json`;
     a.click();
     URL.revokeObjectURL(url);
     toast({ title: 'Backup downloaded' });
@@ -235,7 +235,7 @@ export default function Settings() {
           </button>
         </div>
 
-        <p className="text-center text-xs text-muted-foreground pt-2">CashBook v1.0 — All data stored locally on your device</p>
+        <p className="text-center text-xs text-muted-foreground pt-2">FinTrack v1.0 — All data stored locally on your device</p>
         <p className="text-center text-xs text-muted-foreground ">Founder - Arunraj</p>
       </div>
 
