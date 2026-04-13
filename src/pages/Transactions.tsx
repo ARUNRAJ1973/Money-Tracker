@@ -1,11 +1,12 @@
-import { useState, useEffect } from "react";
-import { Link } from "wouter";
-import { ArrowUpCircle, ArrowDownCircle, Trash2, Plus, Filter, Search, CheckSquare, Square, Pencil } from "lucide-react";
+import { useState, useEffect, useMemo } from "react";
+import { Link, useRoute, useLocation } from "wouter";
+import { ArrowUpCircle, ArrowDownCircle, Trash2, Plus, Filter, Search, Pencil, ArrowLeft, X, MoreVertical, SortAsc, SortDesc, Calendar, CheckSquare, Square } from "lucide-react";
 import { storage, type Transaction, type Account } from "@/lib/storage";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger, DropdownMenuCheckboxItem } from "@/components/ui/dropdown-menu";
 import { format, startOfDay, startOfMonth, startOfYear } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 
@@ -15,6 +16,10 @@ function formatCurrency(amount: number, currency: string) {
   return `${currency}${amount.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
 }
 
+function parseSafeDate(d: string) {
+  return new Date(d.includes('T') ? d : `${d}T00:00:00`);
+}
+
 function filterByPeriod(transactions: Transaction[], period: FilterPeriod): Transaction[] {
   if (period === "all") return transactions;
   const now = new Date();
@@ -22,7 +27,7 @@ function filterByPeriod(transactions: Transaction[], period: FilterPeriod): Tran
   const monthStart = startOfMonth(now).getTime();
   const yearStart = startOfYear(now).getTime();
   return transactions.filter(t => {
-    const txTime = startOfDay(new Date(t.date)).getTime();
+    const txTime = startOfDay(parseSafeDate(t.date)).getTime();
     if (period === "day") return txTime === today;
     if (period === "month") return txTime >= monthStart;
     if (period === "year") return txTime >= yearStart;
@@ -38,6 +43,10 @@ const PERIOD_TABS: { key: FilterPeriod; label: string }[] = [
 ];
 
 export default function Transactions() {
+  const [matchAccount, paramsAccount] = useRoute<{ id: string }>("/accounts/:id");
+  const accountId = matchAccount && paramsAccount ? paramsAccount.id : null;
+  const [, setLocation] = useLocation();
+
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [currency, setCurrency] = useState('₹');
@@ -45,7 +54,9 @@ export default function Transactions() {
   const [filterType, setFilterType] = useState('all');
   const [filterAccount, setFilterAccount] = useState('all');
   const [period, setPeriod] = useState<FilterPeriod>('all');
+  const [showSearch, setShowSearch] = useState(false);
   const [selectMode, setSelectMode] = useState(false);
+  const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc');
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
@@ -64,18 +75,47 @@ export default function Transactions() {
 
   const filtered = filterByPeriod(transactions, period)
     .filter(t => {
+      if (accountId && t.accountId !== accountId) return false;
       if (filterType !== 'all' && t.type !== filterType) return false;
-      if (filterAccount !== 'all' && t.accountId !== filterAccount) return false;
+      if (!accountId && filterAccount !== 'all' && t.accountId !== filterAccount) return false;
       if (search) {
         const q = search.toLowerCase();
         return t.description.toLowerCase().includes(q) || (getAccount(t.accountId)?.name || '').toLowerCase().includes(q);
       }
       return true;
     })
-    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime() || new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    .sort((a, b) => {
+      const diff = parseSafeDate(b.date).getTime() - parseSafeDate(a.date).getTime() || new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      return sortOrder === 'desc' ? diff : -diff;
+    });
 
   const totalIncome = filtered.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
   const totalExpense = filtered.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
+
+  const txBalances = useMemo(() => {
+    const sorted = [...transactions].sort((a, b) => parseSafeDate(a.date).getTime() - parseSafeDate(b.date).getTime() || new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+    
+    const accBalances: Record<string, number> = {};
+    let globalBalance = 0;
+    const balanceMap = new Map<string, number>();
+
+    sorted.forEach(t => {
+      if (!accBalances[t.accountId]) accBalances[t.accountId] = 0;
+      
+      if (t.type === 'income') {
+        accBalances[t.accountId] += t.amount;
+        globalBalance += t.amount;
+      } else {
+        accBalances[t.accountId] -= t.amount;
+        globalBalance -= t.amount;
+      }
+      
+      balanceMap.set(`${t.id}-account`, accBalances[t.accountId]);
+      balanceMap.set(`${t.id}-global`, globalBalance);
+    });
+    
+    return balanceMap;
+  }, [transactions]);
 
   const toggleSelect = (id: string) => {
     setSelected(prev => {
@@ -93,6 +133,8 @@ export default function Transactions() {
       setSelected(new Set(filtered.map(t => t.id)));
     }
   };
+
+  const accountInfo = accountId ? getAccount(accountId) : null;
 
   const confirmDelete = (id?: string) => {
     setDeleteTarget(id || null);
@@ -141,7 +183,16 @@ export default function Transactions() {
     <div className="p-4 md:p-6 max-w-3xl mx-auto pb-44 md:pb-28">
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
-        <h1 className="text-2xl font-bold text-foreground">Transactions</h1>
+        <div className="flex items-center gap-3">
+          {accountId && (
+            <button onClick={() => setLocation('/accounts')} className="w-9 h-9 rounded-xl bg-muted flex items-center justify-center hover:bg-accent transition-colors">
+              <ArrowLeft className="w-4 h-4" />
+            </button>
+          )}
+          <h1 className="text-2xl font-bold text-foreground">
+            {accountInfo ? accountInfo.name : 'Transactions'}
+          </h1>
+        </div>
         <div className="flex gap-2">
           {selectMode ? (
             <>
@@ -154,12 +205,38 @@ export default function Transactions() {
             </>
           ) : (
             <>
-              <Button variant="outline" size="sm" onClick={() => setSelectMode(true)} data-testid="select-mode">
-                <CheckSquare className="w-4 h-4 mr-1" /> Select
-              </Button>
-              <Link href="/add-transaction" data-testid="add-transaction" className="inline-flex items-center gap-1 h-9 px-3 rounded-md bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition-opacity">
-                <Plus className="w-4 h-4" /> Add
-              </Link>
+              {showSearch ? (
+                <Button variant="ghost" size="icon" onClick={() => { setShowSearch(false); setSearch(''); }} className="w-9 h-9">
+                  <X className="w-4 h-4" />
+                </Button>
+              ) : (
+                <Button variant="ghost" size="icon" onClick={() => setShowSearch(true)} className="w-9 h-9" data-testid="search-mode-toggle">
+                  <Search className="w-4 h-4" />
+                </Button>
+              )}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="w-9 h-9">
+                    <MoreVertical className="w-5 h-5 text-foreground" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48">
+                  <DropdownMenuLabel>Filter</DropdownMenuLabel>
+                  <DropdownMenuCheckboxItem checked={filterType === 'all'} onCheckedChange={() => setFilterType('all')}>All Types</DropdownMenuCheckboxItem>
+                  <DropdownMenuCheckboxItem checked={filterType === 'income'} onCheckedChange={() => setFilterType('income')}>Income</DropdownMenuCheckboxItem>
+                  <DropdownMenuCheckboxItem checked={filterType === 'expense'} onCheckedChange={() => setFilterType('expense')}>Expense</DropdownMenuCheckboxItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => setSelectMode(true)}>Select Transactions</DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuLabel>Sort Order</DropdownMenuLabel>
+                  <DropdownMenuCheckboxItem checked={sortOrder === 'desc'} onCheckedChange={() => setSortOrder('desc')}>
+                    <SortDesc className="w-4 h-4 mr-2" /> Newest First
+                  </DropdownMenuCheckboxItem>
+                  <DropdownMenuCheckboxItem checked={sortOrder === 'asc'} onCheckedChange={() => setSortOrder('asc')}>
+                    <SortAsc className="w-4 h-4 mr-2" /> Oldest First
+                  </DropdownMenuCheckboxItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </>
           )}
         </div>
@@ -183,37 +260,54 @@ export default function Transactions() {
 
       {/* Search + Type + Account Filters */}
       <div className="flex gap-2 mb-4 flex-wrap">
-        <div className="relative flex-1 min-w-40">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input
-            placeholder="Search..."
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            className="pl-9"
-            data-testid="search-transactions"
-          />
+        {showSearch && (
+          <div className="relative w-full animate-in fade-in slide-in-from-top-2">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              placeholder="Search transactions..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              className="pl-9 bg-card border-card-border h-10 shadow-sm"
+              data-testid="search-transactions"
+              autoFocus
+            />
+          </div>
+        )}
+
+        <div className="flex w-full gap-2 overflow-x-auto pb-1">
+          <Link
+            href={accountId ? `/add-transaction?accountId=${accountId}&type=income` : `/add-transaction?type=income`}
+            className="flex-1 min-w-[100px] flex items-center justify-center gap-1.5 bg-green-500 hover:bg-green-600 text-white rounded-xl py-2 px-3 text-sm font-semibold transition-colors shadow-sm"
+          >
+            Income
+          </Link>
+          <Link
+            href={accountId ? `/add-transaction?accountId=${accountId}&type=expense` : `/add-transaction?type=expense`}
+            className="flex-1 min-w-[100px] flex items-center justify-center gap-1.5 bg-red-500 hover:bg-red-600 text-white rounded-xl py-2 px-3 text-sm font-semibold transition-colors shadow-sm"
+          >
+            Expense
+          </Link>
+          <Link
+            href={accountId ? `/add-transaction?accountId=${accountId}` : `/add-transaction`}
+            className="flex-1 min-w-[100px] flex items-center justify-center gap-1.5 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl py-2 px-3 text-sm font-semibold transition-colors shadow-sm"
+          >
+            <Plus className="w-4 h-4" /> Add
+          </Link>
         </div>
-        <Select value={filterType} onValueChange={setFilterType}>
-          <SelectTrigger className="w-32" data-testid="filter-type">
-            <SelectValue placeholder="Type" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Types</SelectItem>
-            <SelectItem value="income">Income</SelectItem>
-            <SelectItem value="expense">Expense</SelectItem>
-          </SelectContent>
-        </Select>
-        <Select value={filterAccount} onValueChange={setFilterAccount}>
-          <SelectTrigger className="w-36" data-testid="filter-account">
-            <SelectValue placeholder="Account" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Accounts</SelectItem>
-            {accounts.map(a => (
-              <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+
+        {!accountId && (
+          <Select value={filterAccount} onValueChange={setFilterAccount}>
+            <SelectTrigger className="w-36 flex-1 sm:flex-none" data-testid="filter-account">
+              <SelectValue placeholder="Account" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Accounts</SelectItem>
+              {accounts.map(a => (
+                <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
       </div>
 
       {/* Select-all bar */}
@@ -240,17 +334,20 @@ export default function Transactions() {
         <div className="bg-card border border-card-border rounded-2xl overflow-hidden shadow-sm">
           {filtered.map((tx, idx) => {
             const account = getAccount(tx.accountId);
-            const isSelected = selected.has(tx.id);
+            const displayBalance = accountId ? txBalances.get(`${tx.id}-account`) : txBalances.get(`${tx.id}-global`);
             return (
               <div
                 key={tx.id}
                 data-testid={`tx-row-${tx.id}`}
-                onClick={() => selectMode && toggleSelect(tx.id)}
-                className={`flex items-center gap-3 px-4 py-3 transition-colors ${idx < filtered.length - 1 ? 'border-b border-border' : ''} ${selectMode ? 'cursor-pointer' : ''} ${isSelected ? 'bg-primary/5' : 'hover:bg-muted/30'}`}
+                onClick={() => {
+                  if (selectMode) toggleSelect(tx.id);
+                  else setLocation(accountId ? `/edit-transaction/${tx.id}?accountId=${accountId}` : `/edit-transaction/${tx.id}`);
+                }}
+                className={`flex items-center gap-3 px-4 py-3 transition-colors ${idx < filtered.length - 1 ? 'border-b border-border' : ''} cursor-pointer ${selected.has(tx.id) ? 'bg-primary/5' : 'hover:bg-muted/30'}`}
               >
                 {selectMode && (
-                  <div className={`w-5 h-5 rounded border-2 flex items-center justify-center shrink-0 transition-colors ${isSelected ? 'bg-primary border-primary' : 'border-border'}`}>
-                    {isSelected && <svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4l2.5 2.5L9 1" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>}
+                  <div className={`w-5 h-5 rounded border-2 flex items-center justify-center shrink-0 transition-colors ${selected.has(tx.id) ? 'bg-primary border-primary' : 'border-border'}`}>
+                    {selected.has(tx.id) && <svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4l2.5 2.5L9 1" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>}
                   </div>
                 )}
                 <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${tx.type === 'income' ? 'bg-green-100 dark:bg-green-900/30' : 'bg-red-100 dark:bg-red-900/30'}`}>
@@ -268,32 +365,18 @@ export default function Transactions() {
                       </span>
                     )}
                   </div>
-                  <p className="text-[11px] font-medium text-muted-foreground/70 uppercase tracking-wider">
-                    {format(new Date(tx.date + 'T00:00:00'), 'd MMM yyyy')}
+                  <p className="text-[11px] font-medium text-muted-foreground/70 uppercase tracking-wider mt-0.5">
+                    {format(parseSafeDate(tx.date), 'd MMM yyyy, h:mm a')}
                   </p>
                 </div>
                 <div className="flex flex-col items-end gap-1.5 shrink-0">
                   <p className={`text-sm font-semibold ${tx.type === 'income' ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'}`}>
                     {tx.type === 'income' ? '+' : '-'}{formatCurrency(tx.amount, currency)}
                   </p>
-                  {!selectMode && (
-                    <div className="flex items-center gap-1.5">
-                      <Link 
-                        href={`/edit-transaction/${tx.id}`}
-                        onClick={(e) => e.stopPropagation()}
-                        className="flex items-center justify-center w-6 h-6 rounded-md bg-muted text-muted-foreground hover:bg-primary/10 hover:text-primary transition-colors"
-                        data-testid={`edit-tx-${tx.id}`}
-                      >
-                        <Pencil className="w-3 h-3" />
-                      </Link>
-                      <button
-                        onClick={(e) => { e.stopPropagation(); confirmDelete(tx.id); }}
-                        className="flex items-center justify-center w-6 h-6 rounded-md bg-muted text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
-                        data-testid={`delete-tx-${tx.id}`}
-                      >
-                        <Trash2 className="w-3 h-3" />
-                      </button>
-                    </div>
+                  {!selectMode && displayBalance !== undefined && (
+                    <p className="text-[11px] font-semibold text-muted-foreground mt-0.5 whitespace-nowrap">
+                      Bal: {formatCurrency(displayBalance, currency)}
+                    </p>
                   )}
                 </div>
               </div>

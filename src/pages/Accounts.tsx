@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useLocation } from "wouter";
 import { Wallet, Plus, Pencil, Trash2, Check, ArrowUpCircle, ArrowDownCircle, X, ChevronRight } from "lucide-react";
 import { storage, generateId, type Account, type AccountType, type Transaction } from "@/lib/storage";
 import { Button } from "@/components/ui/button";
@@ -30,7 +31,7 @@ export default function Accounts() {
   const [editId, setEditId] = useState<string | null>(null);
   const [form, setForm] = useState(defaultForm());
   const [deleteId, setDeleteId] = useState<string | null>(null);
-  const [detailAccount, setDetailAccount] = useState<Account | null>(null);
+  const [, setLocation] = useLocation();
   const { toast } = useToast();
 
   const load = () => {
@@ -63,7 +64,9 @@ export default function Accounts() {
     const all = storage.getAccounts();
 
     if (editId) {
-      const updated = all.map(a => a.id === editId ? { ...a, name: form.name.trim(), type: form.type, color: form.color, balance } : a);
+      const oldAccount = all.find(a => a.id === editId);
+      const preserveBalance = oldAccount ? oldAccount.balance : balance;
+      const updated = all.map(a => a.id === editId ? { ...a, name: form.name.trim(), type: form.type, color: form.color, balance: preserveBalance } : a);
       storage.setAccounts(updated);
       toast({ title: 'Account updated' });
     } else {
@@ -76,6 +79,20 @@ export default function Accounts() {
         createdAt: new Date().toISOString(),
       };
       storage.setAccounts([...all, newAccount]);
+
+      if (balance > 0) {
+        const txs = storage.getTransactions();
+        storage.setTransactions([...txs, {
+          id: `ob-${newAccount.id}`,
+          type: 'income',
+          amount: balance,
+          description: 'Opening Balance',
+          accountId: newAccount.id,
+          date: newAccount.createdAt.split('T')[0],
+          createdAt: newAccount.createdAt
+        }]);
+      }
+
       toast({ title: 'Account added' });
     }
 
@@ -102,14 +119,6 @@ export default function Accounts() {
   };
 
   const totalBalance = accounts.reduce((s, a) => s + a.balance, 0);
-
-  // Account detail helpers
-  const accountTxs = detailAccount
-    ? [...transactions.filter(t => t.accountId === detailAccount.id)]
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-    : [];
-  const detailIncome = accountTxs.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
-  const detailExpense = accountTxs.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
 
   return (
     <div className="p-4 md:p-6 max-w-2xl mx-auto">
@@ -141,128 +150,39 @@ export default function Accounts() {
               key={account.id}
               data-testid={`account-item-${account.id}`}
               className="bg-card border border-card-border rounded-2xl p-4 flex items-center gap-4 shadow-sm cursor-pointer hover:shadow-md transition-shadow"
-              onClick={() => setDetailAccount(account)}
+              onClick={() => setLocation(`/accounts/${account.id}`)}
             >
-              <div className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0" style={{ backgroundColor: account.color + '20' }}>
-                <Wallet className="w-6 h-6" style={{ color: account.color }} />
+              <div className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: account.color + '20' }}>
+                <Wallet className="w-5 h-5" style={{ color: account.color }} />
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
                   <p className="font-semibold text-foreground">{account.name}</p>
-                  <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground capitalize">{account.type}</span>
+                  <span className="text-xs px-2 py-0.5 rounded-sm bg-muted text-muted-foreground capitalize">{account.type}</span>
                 </div>
-                <p className="text-xl font-bold mt-0.5" style={{ color: account.color }}>{formatCurrency(account.balance, currency)}</p>
+                <p className="text-md font-bold mt-0.5" style={{ color: account.color }}><span className="text-muted-foreground text-sm">Balance : </span>{formatCurrency(account.balance, currency)}</p>
               </div>
               <div className="flex gap-1.5 items-center">
                 <button
                   onClick={(e) => openEdit(account, e)}
-                  className="w-8 h-8 rounded-xl bg-muted hover:bg-accent flex items-center justify-center transition-colors"
+                  className="w-8 h-8 rounded-lg bg-green-100 hover:bg-accent flex items-center justify-center transition-colors"
                   data-testid={`edit-account-${account.id}`}
                 >
                   <Pencil className="w-3.5 h-3.5 text-muted-foreground" />
                 </button>
                 <button
                   onClick={(e) => handleDelete(account.id, e)}
-                  className="w-8 h-8 rounded-xl bg-muted hover:bg-red-100 dark:hover:bg-red-900/30 flex items-center justify-center transition-colors"
+                  className="w-8 h-8 rounded-lg bg-red-100 hover:bg-red-100 dark:hover:bg-red-900/30 flex items-center justify-center transition-colors"
                   data-testid={`delete-account-${account.id}`}
                 >
                   <Trash2 className="w-3.5 h-3.5 text-muted-foreground hover:text-destructive" />
                 </button>
-                <ChevronRight className="w-4 h-4 text-muted-foreground ml-1" />
+                {/* <ChevronRight className="w-4 h-4 text-muted-foreground ml-1" /> */}
               </div>
             </div>
           ))}
         </div>
       )}
-
-      {/* Account Detail Dialog */}
-      <Dialog open={!!detailAccount} onOpenChange={() => setDetailAccount(null)}>
-        <DialogContent className="max-w-lg max-h-[90vh] flex flex-col p-0 gap-0">
-          {detailAccount && (
-            <>
-              {/* Header */}
-              <div
-                className="p-5 rounded-t-lg relative overflow-hidden"
-                style={{ backgroundColor: detailAccount.color + '18', borderBottom: `2px solid ${detailAccount.color}30` }}
-              >
-                <button
-                  onClick={() => setDetailAccount(null)}
-                  className="absolute top-4 right-4 w-7 h-7 rounded-full bg-black/10 flex items-center justify-center"
-                >
-                  <X className="w-4 h-4 text-foreground" />
-                </button>
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="w-12 h-12 rounded-2xl flex items-center justify-center" style={{ backgroundColor: detailAccount.color + '25' }}>
-                    <Wallet className="w-6 h-6" style={{ color: detailAccount.color }} />
-                  </div>
-                  <div>
-                    <p className="font-bold text-lg text-foreground">{detailAccount.name}</p>
-                    <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground capitalize">{detailAccount.type}</span>
-                  </div>
-                </div>
-                <p className="text-sm text-muted-foreground">Current Balance</p>
-                <p className="text-3xl font-bold" style={{ color: detailAccount.color }}>{formatCurrency(detailAccount.balance, currency)}</p>
-              </div>
-
-              {/* Income / Expense summary */}
-              <div className="grid grid-cols-2 gap-3 p-4">
-                <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-2xl p-3">
-                  <div className="flex items-center gap-1.5 mb-1">
-                    <ArrowUpCircle className="w-4 h-4 text-green-600 dark:text-green-400" />
-                    <span className="text-xs font-medium text-green-700 dark:text-green-400">Total Income</span>
-                  </div>
-                  <p className="text-lg font-bold text-green-600 dark:text-green-400">{formatCurrency(detailIncome, currency)}</p>
-                </div>
-                <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-2xl p-3">
-                  <div className="flex items-center gap-1.5 mb-1">
-                    <ArrowDownCircle className="w-4 h-4 text-red-500 dark:text-red-400" />
-                    <span className="text-xs font-medium text-red-600 dark:text-red-400">Total Expense</span>
-                  </div>
-                  <p className="text-lg font-bold text-red-500 dark:text-red-400">{formatCurrency(detailExpense, currency)}</p>
-                </div>
-              </div>
-
-              {/* Transactions List */}
-              <div className="flex-1 overflow-y-auto px-4 pb-4">
-                <p className="text-sm font-semibold text-foreground mb-2">
-                  Transactions ({accountTxs.length})
-                </p>
-                {accountTxs.length === 0 ? (
-                  <div className="text-center py-8">
-                    <TrendingUp className="w-8 h-8 mx-auto text-muted-foreground mb-2" />
-                    <p className="text-sm text-muted-foreground">No transactions yet for this account</p>
-                  </div>
-                ) : (
-                  <div className="bg-card border border-card-border rounded-2xl overflow-hidden">
-                    {accountTxs.map((tx, idx) => (
-                      <div
-                        key={tx.id}
-                        className={`flex items-center gap-3 px-4 py-3 ${idx < accountTxs.length - 1 ? 'border-b border-border' : ''}`}
-                      >
-                        <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${tx.type === 'income' ? 'bg-green-100 dark:bg-green-900/30' : 'bg-red-100 dark:bg-red-900/30'}`}>
-                          {tx.type === 'income'
-                            ? <ArrowUpCircle className="w-4 h-4 text-green-600 dark:text-green-400" />
-                            : <ArrowDownCircle className="w-4 h-4 text-red-500 dark:text-red-400" />
-                          }
-                        </div>
-                        <div className="flex-1 min-w-0 flex flex-col justify-center">
-                          <p className="text-sm font-semibold text-foreground truncate">{tx.description}</p>
-                          <p className="text-[11px] font-medium text-muted-foreground/70 uppercase tracking-wider">
-                            {format(new Date(tx.date + 'T00:00:00'), 'd MMM yyyy')}
-                          </p>
-                        </div>
-                        <p className={`text-sm font-semibold shrink-0 ${tx.type === 'income' ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'}`}>
-                          {tx.type === 'income' ? '+' : '-'}{formatCurrency(tx.amount, currency)}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </>
-          )}
-        </DialogContent>
-      </Dialog>
 
       {/* Add/Edit Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
@@ -287,24 +207,24 @@ export default function Accounts() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="cash">Cash</SelectItem>
-                  <SelectItem value="bank">Bank</SelectItem>
-                  <SelectItem value="wallet">Wallet</SelectItem>
-                  <SelectItem value="credit">Credit Card</SelectItem>
-                  <SelectItem value="other">Other</SelectItem>
+                  <SelectItem value="cash">CASH</SelectItem>
+                  <SelectItem value="bank">UPI</SelectItem>
+                  <SelectItem value="other">Others</SelectItem>
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-1.5">
-              <Label>{editId ? 'Balance' : 'Opening Balance'}</Label>
-              <Input
-                type="number"
-                placeholder="0.00"
-                value={form.balance}
-                onChange={e => setForm(f => ({ ...f, balance: e.target.value }))}
-                data-testid="input-account-balance"
-              />
-            </div>
+            {!editId && (
+              <div className="space-y-1.5">
+                <Label>Opening Balance</Label>
+                <Input
+                  type="number"
+                  placeholder="0.00"
+                  value={form.balance}
+                  onChange={e => setForm(f => ({ ...f, balance: e.target.value }))}
+                  data-testid="input-account-balance"
+                />
+              </div>
+            )}
             <div className="space-y-1.5">
               <Label>Color</Label>
               <div className="flex gap-2 flex-wrap">

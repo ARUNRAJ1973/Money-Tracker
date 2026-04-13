@@ -176,8 +176,9 @@ export default function Notes() {
                 onChange={e => setTodoInput(e.target.value)}
                 data-testid="input-todo"
               />
-              <Button type="submit" size="icon" data-testid="submit-todo">
-                <Plus className="w-4 h-4" />
+              <Button className="bg-primary px-4" type="submit" size="icon" data-testid="submit-todo">
+                {/* <Plus className="w-4 h-4" /> */}
+                Add
               </Button>
             </div>
             <div className="flex items-center gap-2">

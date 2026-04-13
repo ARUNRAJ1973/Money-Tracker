@@ -10,6 +10,10 @@ function formatCurrency(amount: number, currency: string) {
   return `${currency}${amount.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
 }
 
+function parseSafeDate(d: string) {
+  return new Date(d.includes('T') ? d : `${d}T00:00:00`);
+}
+
 function filterByPeriod(transactions: Transaction[], period: FilterPeriod): Transaction[] {
   const now = new Date();
   const today = startOfDay(now).getTime();
@@ -17,7 +21,7 @@ function filterByPeriod(transactions: Transaction[], period: FilterPeriod): Tran
   const yearStart = startOfYear(now).getTime();
 
   return transactions.filter(t => {
-    const txTime = startOfDay(new Date(t.date)).getTime();
+    const txTime = startOfDay(parseSafeDate(t.date)).getTime();
     if (period === "day") return txTime === today;
     if (period === "month") return txTime >= monthStart;
     if (period === "year") return txTime >= yearStart;
@@ -59,7 +63,10 @@ export default function Dashboard() {
   const periodExpense = filtered.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
 
   const recentTransactions = [...filtered]
-    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    .sort((a, b) => {
+      const diff = parseSafeDate(b.date).getTime() - parseSafeDate(a.date).getTime() || new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      return diff;
+    })
     .slice(0, 10);
 
   const getAccount = (id: string) => accounts.find(a => a.id === id);
@@ -97,11 +104,10 @@ export default function Dashboard() {
           <button
             key={p}
             onClick={() => setPeriod(p)}
-            className={`flex-1 py-2 rounded-xl text-sm font-semibold transition-colors ${
-              period === p
-                ? "bg-primary text-primary-foreground shadow"
-                : "bg-card border border-card-border text-muted-foreground hover:text-foreground"
-            }`}
+            className={`flex-1 py-2 rounded-xl text-sm font-semibold transition-colors ${period === p
+              ? "bg-primary text-primary-foreground shadow"
+              : "bg-card border border-card-border text-muted-foreground hover:text-foreground"
+              }`}
           >
             {p === "day" ? "Day" : p === "month" ? "Month" : "Year"}
           </button>
@@ -136,30 +142,31 @@ export default function Dashboard() {
           <h2 className="text-base font-semibold text-foreground">Accounts</h2>
           <Link href="/accounts" className="text-primary text-sm font-medium">View all</Link>
         </div>
-        <div className="flex gap-3 overflow-x-auto pb-1">
+        <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4 md:mx-0 md:px-0 hide-scrollbar">
           {accounts.map(account => (
             <Link
               key={account.id}
-              href="/accounts"
+              href={`/accounts/${account.id}`}
               data-testid={`account-card-${account.id}`}
-              className="flex-shrink-0 bg-card border border-card-border rounded-2xl p-4 w-44 shadow-sm hover:shadow-md transition-shadow block"
+              className="flex-shrink-0 bg-card border border-card-border rounded-xl p-2.5 min-w-[160px] pr-4 flex items-center gap-3 shadow-sm hover:border-primary/40 transition-all group"
             >
-              <div className="flex items-center gap-2 mb-3">
-                <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ backgroundColor: account.color + '20' }}>
-                  <Wallet className="w-4 h-4" style={{ color: account.color }} />
-                </div>
-                <span className="text-xs text-muted-foreground font-medium capitalize">{account.type}</span>
+              <div className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform" style={{ backgroundColor: account.color + '15' }}>
+                <Wallet className="w-5 h-5" style={{ color: account.color }} />
               </div>
-              <p className="text-xs text-muted-foreground mb-0.5">{account.name}</p>
-              <p className="text-base font-bold text-foreground">{formatCurrency(account.balance, currency)}</p>
+              <div className="flex flex-col">
+                <span className="text-[12px] text-muted-foreground font-bold uppercase tracking-wider mb-0.5 truncate max-w-[100px]">{account.name}</span>
+                <span className="text-sm font-bold text-foreground leading-none"><span className="text-muted-foreground text-sm">Bal :</span> {formatCurrency(account.balance, currency)}</span>
+              </div>
             </Link>
           ))}
           <Link
             href="/accounts"
-            className="flex-shrink-0 bg-card border border-dashed border-border rounded-2xl p-4 w-44 flex items-center justify-center gap-2 text-muted-foreground hover:text-primary hover:border-primary transition-colors"
+            className="flex-shrink-0 bg-gray-50 border-2 border-gray-200 rounded-xl px-4 flex items-center justify-center gap-2 text-muted-foreground hover:bg-muted/50 hover:text-primary hover:border-primary transition-colors h-[62px]"
           >
-            <Plus className="w-5 h-5" />
-            <span className="text-sm font-medium">Add Account</span>
+            <div className="w-6 h-6 rounded-md bg-muted flex items-center justify-center">
+              <Plus className="w-3.5 h-3.5" />
+            </div>
+            <span className="text-xs font-semibold">Add</span>
           </Link>
         </div>
       </div>
@@ -199,7 +206,7 @@ export default function Dashboard() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-foreground truncate">{tx.description}</p>
-                    <p className="text-xs text-muted-foreground">{account?.name} · {format(new Date(tx.date), 'd MMM yyyy')}</p>
+                    <p className="text-xs text-muted-foreground">{account?.name} · {format(parseSafeDate(tx.date), 'd MMM yyyy, h:mm a')}</p>
                   </div>
                   <p className={`text-sm font-semibold ${tx.type === 'income' ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'}`}>
                     {tx.type === 'income' ? '+' : '-'}{formatCurrency(tx.amount, currency)}

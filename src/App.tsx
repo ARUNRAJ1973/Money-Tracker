@@ -3,7 +3,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useEffect, useState } from "react";
-import { storage, seedDefaultData } from "@/lib/storage";
+import { storage, migrateOpeningBalances } from "@/lib/storage";
 import Layout from "@/components/Layout";
 import MpinLock from "@/components/MpinLock";
 import Dashboard from "@/pages/Dashboard";
@@ -25,6 +25,7 @@ function AppRoutes() {
         <Route path="/transactions" component={Transactions} />
         <Route path="/add-transaction" component={AddTransaction} />
         <Route path="/edit-transaction/:id" component={AddTransaction} />
+        <Route path="/accounts/:id" component={Transactions} />
         <Route path="/accounts" component={Accounts} />
         <Route path="/notes" component={Notes} />
         <Route path="/calculator" component={Calculator} />
@@ -41,7 +42,7 @@ function App() {
   const [settings, setSettings] = useState(storage.getSettings());
 
   useEffect(() => {
-    seedDefaultData();
+    migrateOpeningBalances();
     const s = storage.getSettings();
     setSettings(s);
     document.documentElement.classList.toggle('dark', s.theme === 'dark');

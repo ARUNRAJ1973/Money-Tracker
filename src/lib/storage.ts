@@ -131,50 +131,51 @@ export function generateId(): string {
   return Date.now().toString(36) + Math.random().toString(36).slice(2);
 }
 
-export function seedDefaultData() {
-  if (storage.isInitialized()) return;
+export function migrateOpeningBalances() {
+  if (localStorage.getItem('cashbook_ob_migrated') === 'true') return;
 
-  const now = new Date();
-  const accountId1 = generateId();
-  const accountId2 = generateId();
-  const accountId3 = generateId();
+  const accounts = storage.getAccounts();
+  const txs = storage.getTransactions();
+  if (accounts.length === 0) {
+    localStorage.setItem('cashbook_ob_migrated', 'true');
+    return;
+  }
+  
+  let changed = false;
+  accounts.forEach(a => {
+    const acctTxs = txs.filter(t => t.accountId === a.id);
+    const inc = acctTxs.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
+    const exp = acctTxs.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
+    const diff = a.balance - inc + exp;
 
-  const accounts: Account[] = [
-    { id: accountId1, name: 'Cash', type: 'cash', balance: 5000, color: '#10b981', createdAt: now.toISOString() },
-    { id: accountId2, name: 'Bank Account', type: 'bank', balance: 25000, color: '#3b82f6', createdAt: now.toISOString() },
-    { id: accountId3, name: 'Wallet', type: 'wallet', balance: 1200, color: '#f59e0b', createdAt: now.toISOString() },
-  ];
+    if (diff > 0) {
+      txs.push({
+        id: `ob-${a.id}`,
+        type: 'income',
+        amount: diff,
+        description: 'Opening Balance',
+        accountId: a.id,
+        date: a.createdAt.split('T')[0] || new Date().toISOString().split('T')[0],
+        createdAt: a.createdAt || new Date().toISOString()
+      });
+      changed = true;
+    } else if (diff < 0) {
+      txs.push({
+        id: `ob-${a.id}`,
+        type: 'expense',
+        amount: Math.abs(diff),
+        description: 'Opening Balance Adjustment',
+        accountId: a.id,
+        date: a.createdAt.split('T')[0] || new Date().toISOString().split('T')[0],
+        createdAt: a.createdAt || new Date().toISOString()
+      });
+      changed = true;
+    }
+  });
 
-  const fmt = (d: Date) => d.toISOString().split('T')[0];
-  const d0 = fmt(now);
-  const d1 = fmt(new Date(now.getTime() - 86400000));
-  const d2 = fmt(new Date(now.getTime() - 2 * 86400000));
-  const d3 = fmt(new Date(now.getTime() - 3 * 86400000));
-
-  const transactions: Transaction[] = [
-    { id: generateId(), type: 'income', amount: 45000, description: 'Monthly salary', accountId: accountId2, date: d3, createdAt: new Date(now.getTime() - 3 * 86400000).toISOString() },
-    { id: generateId(), type: 'expense', amount: 800, description: 'Groceries', accountId: accountId1, date: d2, createdAt: new Date(now.getTime() - 2 * 86400000).toISOString() },
-    { id: generateId(), type: 'expense', amount: 1500, description: 'Monthly bus pass', accountId: accountId2, date: d2, createdAt: new Date(now.getTime() - 2 * 86400000 + 1000).toISOString() },
-    { id: generateId(), type: 'income', amount: 2000, description: 'Design project', accountId: accountId2, date: d1, createdAt: new Date(now.getTime() - 86400000).toISOString() },
-    { id: generateId(), type: 'expense', amount: 350, description: 'Dinner', accountId: accountId3, date: d1, createdAt: new Date(now.getTime() - 86400000 + 1000).toISOString() },
-    { id: generateId(), type: 'expense', amount: 200, description: 'Movie tickets', accountId: accountId1, date: d0, createdAt: now.toISOString() },
-    { id: generateId(), type: 'income', amount: 500, description: 'Cash from family', accountId: accountId1, date: d0, createdAt: new Date(now.getTime() + 1000).toISOString() },
-  ];
-
-  const notes: Note[] = [
-    { id: generateId(), title: 'Monthly Budget Plan', body: 'Rent: 8000\nFood: 5000\nTransport: 2000\nEntertainment: 1000\nSavings: 10000', createdAt: d3, updatedAt: d3 },
-  ];
-
-  const todos: Todo[] = [
-    { id: generateId(), text: 'Pay electricity bill', completed: false, dueDate: fmt(new Date(now.getTime() + 5 * 86400000)), reminderEnabled: false, createdAt: now.toISOString() },
-    { id: generateId(), text: 'Transfer rent money', completed: false, dueDate: fmt(new Date(now.getTime() + 10 * 86400000)), reminderEnabled: false, createdAt: now.toISOString() },
-    { id: generateId(), text: 'Review monthly expenses', completed: true, reminderEnabled: false, createdAt: now.toISOString() },
-  ];
-
-  storage.setAccounts(accounts);
-  storage.setTransactions(transactions);
-  storage.setNotes(notes);
-  storage.setTodos(todos);
-  storage.setInitialized();
+  if (changed) {
+    storage.setTransactions(txs);
+  }
+  localStorage.setItem('cashbook_ob_migrated', 'true');
 }
 

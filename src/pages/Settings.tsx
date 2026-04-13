@@ -236,6 +236,7 @@ export default function Settings() {
         </div>
 
         <p className="text-center text-xs text-muted-foreground pt-2">CashBook v1.0 — All data stored locally on your device</p>
+        <p className="text-center text-xs text-muted-foreground ">Founder - Arunraj</p>
       </div>
 
       {/* MPIN Dialog */}
@@ -252,7 +253,7 @@ export default function Settings() {
               ))}
             </div>
             <div className="grid grid-cols-3 gap-2 w-full">
-              {['1','2','3','4','5','6','7','8','9','','0','del'].map(key => (
+              {['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', 'del'].map(key => (
                 <button
                   key={key}
                   onClick={() => { if (key === 'del') handleMpinDelete(); else if (key) handleMpinDigit(key); }}

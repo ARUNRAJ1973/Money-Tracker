@@ -8,8 +8,8 @@ interface LayoutProps {
 
 const navItems = [
   { path: '/', icon: LayoutDashboard, label: 'Dashboard' },
-  { path: '/transactions', icon: ArrowLeftRight, label: 'Transactions' },
-  // { path: '/accounts', icon: Wallet, label: 'Accounts' },
+  // { path: '/transactions', icon: ArrowLeftRight, label: 'Transactions' },
+  { path: '/accounts', icon: Wallet, label: 'Accounts' },
   { path: '/notes', icon: StickyNote, label: 'Notes' },
   { path: '/calculator', icon: Calculator, label: 'Calculator' },
   { path: '/settings', icon: Settings, label: 'Settings' },
