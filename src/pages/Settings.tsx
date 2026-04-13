@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Moon, Sun, Shield, Download, Upload, Trash2, ChevronRight, Check } from "lucide-react";
+import { Shield, Download, Upload, Trash2, ChevronRight, Coins, Palette, ShieldCheck } from "lucide-react";
 import { storage, type AppSettings } from "@/lib/storage";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -123,125 +123,154 @@ export default function Settings() {
   }[mpinStep];
 
   return (
-    <div className="p-4 md:p-6 max-w-lg mx-auto">
+    <div className="p-4 md:p-6 max-w-lg mx-auto pb-24 md:pb-10">
       <h1 className="text-2xl font-bold text-foreground mb-6">Settings</h1>
 
-      <div className="space-y-3">
-        {/* Appearance */}
-        <div className="bg-card border border-card-border rounded-2xl overflow-hidden shadow-sm">
-          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide px-4 pt-4 pb-2">Appearance</p>
-          <button
-            onClick={toggleTheme}
-            className="w-full flex items-center gap-3 px-4 py-3 hover:bg-muted/40 transition-colors border-t border-border"
-            data-testid="toggle-theme"
-          >
-            {settings.theme === 'dark' ? <Moon className="w-5 h-5 text-primary" /> : <Sun className="w-5 h-5 text-primary" />}
-            <span className="flex-1 text-left text-sm font-medium text-foreground">
-              {settings.theme === 'dark' ? 'Dark Mode' : 'Light Mode'}
-            </span>
-            <div className={cn("w-11 h-6 rounded-full transition-all relative", settings.theme === 'dark' ? 'bg-primary' : 'bg-muted')}>
-              <div className={cn("w-4.5 h-4.5 rounded-full bg-white absolute top-0.75 transition-all shadow-sm", settings.theme === 'dark' ? 'left-5.5' : 'left-0.75')} />
-            </div>
-          </button>
-        </div>
+      <div className="space-y-6">
+        {/* Preferences Group */}
+        <div>
+          <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-2.5 px-2">Preferences</p>
+          <div className="bg-card border border-border rounded-2xl shadow-sm overflow-hidden text-left">
+            <button
+              onClick={toggleTheme}
+              className="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-muted/40 transition-colors border-b border-border"
+              data-testid="toggle-theme"
+            >
+              <div className="w-9 h-9 rounded-xl bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center shrink-0">
+                <Palette className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+              </div>
+              <div className="flex-1 text-left min-w-0">
+                <p className="text-sm font-semibold text-foreground">Theme</p>
+                <p className="text-xs text-muted-foreground truncate">{settings.theme === 'dark' ? 'Dark Mode' : 'Light Mode'}</p>
+              </div>
+              <div className={cn("w-11 h-6 rounded-full transition-all relative shadow-inner shrink-0", settings.theme === 'dark' ? 'bg-primary' : 'bg-border')}>
+                <div className={cn("w-4.5 h-4.5 rounded-full bg-white absolute top-0.75 transition-all shadow-sm", settings.theme === 'dark' ? 'left-5.5' : 'left-0.75')} />
+              </div>
+            </button>
 
-        {/* Currency */}
-        <div className="bg-card border border-card-border rounded-2xl overflow-hidden shadow-sm">
-          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide px-4 pt-4 pb-2">Currency</p>
-          <div className="px-4 pb-4 border-t border-border">
-            <Select value={settings.currency} onValueChange={v => save({ ...settings, currency: v })}>
-              <SelectTrigger className="mt-3" data-testid="select-currency">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="₹">₹ Indian Rupee</SelectItem>
-                <SelectItem value="$">$ US Dollar</SelectItem>
-                <SelectItem value="€">€ Euro</SelectItem>
-                <SelectItem value="£">£ British Pound</SelectItem>
-                <SelectItem value="¥">¥ Japanese Yen</SelectItem>
-                <SelectItem value="৳">৳ Bangladeshi Taka</SelectItem>
-              </SelectContent>
-            </Select>
+            <div className="w-full flex items-center gap-3 px-4 py-3 hover:bg-muted/40 transition-colors">
+              <div className="w-9 h-9 rounded-xl bg-green-100 dark:bg-green-900/30 flex items-center justify-center shrink-0">
+                <Coins className="w-5 h-5 text-green-600 dark:text-green-400" />
+              </div>
+              <div className="flex-1 text-left min-w-0">
+                <p className="text-sm font-semibold text-foreground">Currency</p>
+                <p className="text-xs text-muted-foreground truncate">Select your primary currency</p>
+              </div>
+              <div className="shrink-0 w-24">
+                <Select value={settings.currency} onValueChange={v => save({ ...settings, currency: v })}>
+                  <SelectTrigger className="h-8 bg-muted border-none shadow-none text-xs font-semibold focus:ring-0 justify-between px-3" data-testid="select-currency">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="₹">₹ INR</SelectItem>
+                    <SelectItem value="$">$ USD</SelectItem>
+                    <SelectItem value="S$">S$ SGD</SelectItem>
+                    <SelectItem value="€">€ EUR</SelectItem>
+                    <SelectItem value="£">£ GBP</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* Security */}
-        <div className="bg-card border border-card-border rounded-2xl overflow-hidden shadow-sm">
-          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide px-4 pt-4 pb-2">Security</p>
-          <button
-            onClick={openMpinDialog}
-            className="w-full flex items-center gap-3 px-4 py-3 hover:bg-muted/40 transition-colors border-t border-border"
-            data-testid="setup-mpin"
-          >
-            <Shield className="w-5 h-5 text-primary" />
-            <div className="flex-1 text-left">
-              <p className="text-sm font-medium text-foreground">MPIN Lock</p>
-              <p className="text-xs text-muted-foreground">{settings.mpinEnabled ? 'Enabled — tap to change' : 'Disabled — tap to enable'}</p>
-            </div>
-            {settings.mpinEnabled && <span className="text-xs px-2 py-0.5 rounded-full bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 font-medium">ON</span>}
-            <ChevronRight className="w-4 h-4 text-muted-foreground" />
-          </button>
-          {settings.mpinEnabled && (
+        {/* Security Group */}
+        <div>
+          <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-2.5 px-2">Security</p>
+          <div className="bg-card border border-border rounded-2xl shadow-sm overflow-hidden text-left">
             <button
-              onClick={disableMpin}
-              className="w-full flex items-center gap-3 px-4 py-3 hover:bg-muted/40 transition-colors border-t border-border text-destructive"
-              data-testid="disable-mpin"
+              onClick={openMpinDialog}
+              className={cn("w-full flex items-center gap-3 px-4 py-3.5 hover:bg-muted/40 transition-colors", settings.mpinEnabled && "border-b border-border")}
+              data-testid="setup-mpin"
             >
-              <Shield className="w-5 h-5" />
-              <span className="text-sm font-medium">Disable MPIN</span>
+              <div className="w-9 h-9 rounded-xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center shrink-0">
+                <ShieldCheck className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+              </div>
+              <div className="flex-1 text-left min-w-0">
+                <p className="text-sm font-semibold text-foreground">MPIN Lock</p>
+                <p className="text-xs text-muted-foreground truncate">Tap to {settings.mpinEnabled ? 'change PIN' : 'setup'}</p>
+              </div>
+              <div className={cn("w-11 h-6 rounded-full transition-all relative shadow-inner shrink-0", settings.mpinEnabled ? 'bg-primary' : 'bg-border')}>
+                <div className={cn("w-4.5 h-4.5 rounded-full bg-white absolute top-0.75 transition-all shadow-sm", settings.mpinEnabled ? 'left-5.5' : 'left-0.75')} />
+              </div>
             </button>
-          )}
+
+            {settings.mpinEnabled && (
+              <button
+                onClick={disableMpin}
+                className="w-full flex items-center justify-center gap-2 px-4 py-3.5 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors text-destructive text-sm font-semibold"
+                data-testid="disable-mpin"
+              >
+                Disable MPIN
+              </button>
+            )}
+          </div>
         </div>
 
-        {/* Data */}
-        <div className="bg-card border border-card-border rounded-2xl overflow-hidden shadow-sm">
-          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide px-4 pt-4 pb-2">Data</p>
-          <button
-            onClick={handleBackup}
-            className="w-full flex items-center gap-3 px-4 py-3 hover:bg-muted/40 transition-colors border-t border-border"
-            data-testid="backup-data"
-          >
-            <Download className="w-5 h-5 text-primary" />
-            <div className="flex-1 text-left">
-              <p className="text-sm font-medium text-foreground">Backup Data</p>
-              <p className="text-xs text-muted-foreground">Download all your data as JSON</p>
-            </div>
-            <ChevronRight className="w-4 h-4 text-muted-foreground" />
-          </button>
-          <button
-            onClick={() => fileRef.current?.click()}
-            className="w-full flex items-center gap-3 px-4 py-3 hover:bg-muted/40 transition-colors border-t border-border"
-            data-testid="restore-data"
-          >
-            <Upload className="w-5 h-5 text-primary" />
-            <div className="flex-1 text-left">
-              <p className="text-sm font-medium text-foreground">Restore Data</p>
-              <p className="text-xs text-muted-foreground">Import from a backup file</p>
-            </div>
-            <ChevronRight className="w-4 h-4 text-muted-foreground" />
-          </button>
-          <input ref={fileRef} type="file" accept=".json" className="hidden" onChange={handleRestore} data-testid="file-restore" />
-          <button
-            onClick={() => setClearDialog(true)}
-            className="w-full flex items-center gap-3 px-4 py-3 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors border-t border-border"
-            data-testid="clear-data"
-          >
-            <Trash2 className="w-5 h-5 text-destructive" />
-            <div className="flex-1 text-left">
-              <p className="text-sm font-medium text-destructive">Clear All Data</p>
-              <p className="text-xs text-muted-foreground">Permanently delete everything</p>
-            </div>
-            <ChevronRight className="w-4 h-4 text-muted-foreground" />
-          </button>
+        {/* Data Group */}
+        <div>
+          <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-2.5 px-2">Data Management</p>
+          <div className="bg-card border border-border rounded-2xl shadow-sm overflow-hidden text-left">
+            <button
+              onClick={handleBackup}
+              className="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-muted/40 transition-colors border-b border-border"
+              data-testid="backup-data"
+            >
+              <div className="w-9 h-9 rounded-xl bg-cyan-100 dark:bg-cyan-900/30 flex items-center justify-center shrink-0">
+                <Download className="w-5 h-5 text-cyan-600 dark:text-cyan-400" />
+              </div>
+              <div className="flex-1 text-left min-w-0">
+                <p className="text-sm font-semibold text-foreground">Backup Data</p>
+                <p className="text-xs text-muted-foreground truncate">Download all transactions & accounts</p>
+              </div>
+              <ChevronRight className="w-4 h-4 text-muted-foreground opacity-50 shrink-0" />
+            </button>
+
+            <button
+              onClick={() => fileRef.current?.click()}
+              className="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-muted/40 transition-colors border-b border-border"
+              data-testid="restore-data"
+            >
+              <div className="w-9 h-9 rounded-xl bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center shrink-0">
+                <Upload className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+              </div>
+              <div className="flex-1 text-left min-w-0">
+                <p className="text-sm font-semibold text-foreground">Restore Data</p>
+                <p className="text-xs text-muted-foreground truncate">Load from a backup JSON file</p>
+              </div>
+              <ChevronRight className="w-4 h-4 text-muted-foreground opacity-50 shrink-0" />
+            </button>
+            <input ref={fileRef} type="file" accept=".json" className="hidden" onChange={handleRestore} data-testid="file-restore" />
+
+            <button
+              onClick={() => setClearDialog(true)}
+              className="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+              data-testid="clear-data"
+            >
+              <div className="w-9 h-9 rounded-xl bg-red-100 dark:bg-red-900/30 flex items-center justify-center shrink-0">
+                <Trash2 className="w-5 h-5 text-destructive" />
+              </div>
+              <div className="flex-1 text-left min-w-0">
+                <p className="text-sm font-semibold text-destructive">Delete All Data</p>
+                <p className="text-xs text-muted-foreground truncate">Permanently delete everything</p>
+              </div>
+            </button>
+          </div>
         </div>
 
-        <p className="text-center text-xs text-muted-foreground pt-2">FinTrack v1.0 — All data stored locally on your device</p>
-        <p className="text-center text-xs text-muted-foreground ">Founder - Arunraj</p>
+        <div className="flex flex-col items-center justify-center pb-1">
+          <div className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center mb-3">
+            <span className="font-bold text-primary text-xl">F</span>
+          </div>
+          <p className="text-center text-xs font-semibold text-foreground">FinTrack v1.0</p>
+          <p className="text-center text-[11px] text-muted-foreground mt-0.5">All data is stored locally on this device</p>
+          <p className="text-center text-[10px] text-muted-foreground/70 mt-2 font-medium">Developed by - ARUNRAJ</p>
+        </div>
       </div>
 
       {/* MPIN Dialog */}
       <Dialog open={mpinDialog} onOpenChange={v => { if (!v) { setMpinDialog(false); setMpinInput(''); setNewPin(''); setMpinStep('new'); } }}>
-        <DialogContent className="max-w-xs">
+        <DialogContent className="max-w-xs rounded-2xl">
           <DialogHeader>
             <DialogTitle>MPIN Setup</DialogTitle>
           </DialogHeader>
@@ -271,12 +300,12 @@ export default function Settings() {
 
       {/* Clear all confirm */}
       <Dialog open={clearDialog} onOpenChange={setClearDialog}>
-        <DialogContent>
+        <DialogContent className="rounded-2xl">
           <DialogHeader><DialogTitle>Clear All Data</DialogTitle></DialogHeader>
           <p className="text-muted-foreground text-sm">This will permanently delete all your transactions, accounts, notes, and settings. This cannot be undone.</p>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setClearDialog(false)}>Cancel</Button>
-            <Button variant="destructive" onClick={handleClearAll} data-testid="confirm-clear">Clear Everything</Button>
+          <DialogFooter className="flex flex-row justify-center gap-2">
+            <Button className="w-1/2" variant="outline" onClick={() => setClearDialog(false)}>Cancel</Button>
+            <Button className="w-1/2" variant="destructive" onClick={handleClearAll} data-testid="confirm-clear">Delete All</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

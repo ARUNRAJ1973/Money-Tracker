@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { Wallet, Plus, Pencil, Trash2, Check, ArrowUpCircle, ArrowDownCircle, X, ChevronRight } from "lucide-react";
-import { storage, generateId, type Account, type AccountType, type Transaction } from "@/lib/storage";
+import { storage, generateId, type Account, type Transaction } from "@/lib/storage";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,7 +18,6 @@ const ACCOUNT_COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#8b5cf6', '#ef4444', '
 
 const defaultForm = () => ({
   name: '',
-  type: 'cash' as AccountType,
   balance: '',
   color: '#10b981',
 });
@@ -51,7 +50,7 @@ export default function Accounts() {
   const openEdit = (a: Account, e: React.MouseEvent) => {
     e.stopPropagation();
     setEditId(a.id);
-    setForm({ name: a.name, type: a.type, balance: a.balance.toString(), color: a.color });
+    setForm({ name: a.name, balance: a.balance.toString(), color: a.color });
     setDialogOpen(true);
   };
 
@@ -66,14 +65,13 @@ export default function Accounts() {
     if (editId) {
       const oldAccount = all.find(a => a.id === editId);
       const preserveBalance = oldAccount ? oldAccount.balance : balance;
-      const updated = all.map(a => a.id === editId ? { ...a, name: form.name.trim(), type: form.type, color: form.color, balance: preserveBalance } : a);
+      const updated = all.map(a => a.id === editId ? { ...a, name: form.name.trim(), color: form.color, balance: preserveBalance } : a);
       storage.setAccounts(updated);
       toast({ title: 'Account updated' });
     } else {
       const newAccount: Account = {
         id: generateId(),
         name: form.name.trim(),
-        type: form.type,
         balance,
         color: form.color,
         createdAt: new Date().toISOString(),
@@ -156,10 +154,7 @@ export default function Accounts() {
                 <Wallet className="w-5 h-5" style={{ color: account.color }} />
               </div>
               <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <p className="font-semibold text-foreground">{account.name}</p>
-                  <span className="text-xs px-2 py-0.5 rounded-sm bg-muted text-muted-foreground capitalize">{account.type}</span>
-                </div>
+                <p className="font-semibold text-foreground">{account.name}</p>
                 <p className="text-md font-bold mt-0.5" style={{ color: account.color }}><span className="text-muted-foreground text-sm">Balance : </span>{formatCurrency(account.balance, currency)}</p>
               </div>
               <div className="flex gap-1.5 items-center">
@@ -186,7 +181,7 @@ export default function Accounts() {
 
       {/* Add/Edit Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent>
+        <DialogContent className="rounded-2xl">
           <DialogHeader>
             <DialogTitle>{editId ? 'Edit Account' : 'Add Account'}</DialogTitle>
           </DialogHeader>
@@ -200,19 +195,7 @@ export default function Accounts() {
                 data-testid="input-account-name"
               />
             </div>
-            <div className="space-y-1.5">
-              <Label>Type</Label>
-              <Select value={form.type} onValueChange={v => setForm(f => ({ ...f, type: v as AccountType }))}>
-                <SelectTrigger data-testid="select-account-type">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="cash">CASH</SelectItem>
-                  <SelectItem value="bank">UPI</SelectItem>
-                  <SelectItem value="other">Others</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+
             {!editId && (
               <div className="space-y-1.5">
                 <Label>Opening Balance</Label>
@@ -252,12 +235,12 @@ export default function Accounts() {
 
       {/* Delete confirm */}
       <Dialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
-        <DialogContent>
+        <DialogContent className="rounded-2xl">
           <DialogHeader><DialogTitle>Delete Account</DialogTitle></DialogHeader>
           <p className="text-muted-foreground text-sm">Are you sure you want to delete this account?</p>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteId(null)}>Cancel</Button>
-            <Button variant="destructive" onClick={confirmDelete} data-testid="confirm-delete-account">Delete</Button>
+            <Button className="w-1/2" variant="outline" onClick={() => setDeleteId(null)}>Cancel</Button>
+            <Button className="w-1/2" variant="destructive" onClick={confirmDelete} data-testid="confirm-delete-account">Delete</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

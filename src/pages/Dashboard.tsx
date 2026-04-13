@@ -161,12 +161,12 @@ export default function Dashboard() {
           ))}
           <Link
             href="/accounts"
-            className="flex-shrink-0 bg-gray-50 border-2 border-gray-200 rounded-xl px-4 flex items-center justify-center gap-2 text-muted-foreground hover:bg-muted/50 hover:text-primary hover:border-primary transition-colors h-[62px]"
+            className="flex-shrink-0 bg-muted border-2 border-border rounded-xl px-4 flex items-center justify-center gap-2 text-muted-foreground hover:bg-muted/50 hover:text-primary hover:border-primary transition-colors h-[62px]"
           >
             <div className="w-6 h-6 rounded-md bg-muted flex items-center justify-center">
-              <Plus className="w-3.5 h-3.5" />
+              <Plus className="w-4 h-4" />
             </div>
-            <span className="text-xs font-semibold">Add</span>
+            <span className="text-sm font-bold">Add</span>
           </Link>
         </div>
       </div>

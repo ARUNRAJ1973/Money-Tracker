@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useLocation, useRoute } from "wouter";
 import { ArrowLeft } from "lucide-react";
-import { storage, generateId, type Account } from "@/lib/storage";
+import { storage, generateId, type Account, type PaymentMode } from "@/lib/storage";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -23,6 +23,7 @@ export default function AddTransaction() {
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
   const [accountId, setAccountId] = useState('');
+  const [paymentMode, setPaymentMode] = useState<PaymentMode>('upi');
   const [date, setDate] = useState(() => {
     const now = new Date();
     return new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().split('T')[0];
@@ -46,6 +47,7 @@ export default function AddTransaction() {
         setAmount(txToEdit.amount.toString());
         setDescription(txToEdit.description);
         setAccountId(txToEdit.accountId);
+        setPaymentMode(txToEdit.paymentMode || 'upi');
         if (txToEdit.date.includes('T')) {
           const [d, t] = txToEdit.date.split('T');
           setDate(d);
@@ -114,6 +116,7 @@ export default function AddTransaction() {
           amount: num,
           description: description.trim(),
           accountId,
+          paymentMode,
           date: `${date}T${time}:00`,
         };
         txs[oldTxIndex] = updatedTx;
@@ -127,6 +130,7 @@ export default function AddTransaction() {
         amount: num,
         description: description.trim(),
         accountId,
+        paymentMode,
         date: `${date}T${time}:00`,
         createdAt: new Date().toISOString(),
       };
@@ -233,6 +237,24 @@ export default function AddTransaction() {
           />
         </div>
 
+        {/* Payment Mode */}
+        <div className="space-y-1.5">
+          <Label>Payment Mode</Label>
+          <div className="flex gap-2">
+            {(['upi', 'cash', 'other'] as const).map(mode => (
+              <button
+                key={mode}
+                type="button"
+                onClick={() => setPaymentMode(mode)}
+                className={cn("flex-1 py-2.5 rounded-xl text-sm font-semibold transition-colors border", paymentMode === mode ? 'bg-primary text-primary-foreground border-primary' : 'bg-card text-muted-foreground hover:bg-muted')}
+                data-testid={`payment-mode-${mode}`}
+              >
+                {mode.toUpperCase()}
+              </button>
+            ))}
+          </div>
+        </div>
+
         {/* Account */}
         {!initialAccountId && (
           <div className="space-y-1.5">
@@ -294,16 +316,16 @@ export default function AddTransaction() {
 
       {/* Delete Dialog */}
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <DialogContent>
+        <DialogContent className="rounded-2xl">
           <DialogHeader>
             <DialogTitle>Delete Transaction</DialogTitle>
           </DialogHeader>
           <p className="text-muted-foreground text-sm">
             Are you sure you want to delete this transaction? This will also adjust the account balance.
           </p>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
-            <Button variant="destructive" onClick={handleDelete}>Delete</Button>
+          <DialogFooter className="flex flex-row justify-center gap-2">
+            <Button className="w-1/2" variant="outline" onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
+            <Button className="w-1/2" variant="destructive" onClick={handleDelete}>Delete</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

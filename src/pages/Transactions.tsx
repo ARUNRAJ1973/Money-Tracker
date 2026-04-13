@@ -94,14 +94,14 @@ export default function Transactions() {
 
   const txBalances = useMemo(() => {
     const sorted = [...transactions].sort((a, b) => parseSafeDate(a.date).getTime() - parseSafeDate(b.date).getTime() || new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
-    
+
     const accBalances: Record<string, number> = {};
     let globalBalance = 0;
     const balanceMap = new Map<string, number>();
 
     sorted.forEach(t => {
       if (!accBalances[t.accountId]) accBalances[t.accountId] = 0;
-      
+
       if (t.type === 'income') {
         accBalances[t.accountId] += t.amount;
         globalBalance += t.amount;
@@ -109,11 +109,11 @@ export default function Transactions() {
         accBalances[t.accountId] -= t.amount;
         globalBalance -= t.amount;
       }
-      
+
       balanceMap.set(`${t.id}-account`, accBalances[t.accountId]);
       balanceMap.set(`${t.id}-global`, globalBalance);
     });
-    
+
     return balanceMap;
   }, [transactions]);
 
@@ -185,12 +185,13 @@ export default function Transactions() {
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
           {accountId && (
-            <button onClick={() => setLocation('/accounts')} className="w-9 h-9 rounded-xl bg-muted flex items-center justify-center hover:bg-accent transition-colors">
-              <ArrowLeft className="w-4 h-4" />
+            <button onClick={() => setLocation('/accounts')} className="w-9 h-9 rounded-full bg-muted flex items-center justify-center hover:bg-accent transition-colors">
+              <ArrowLeft className="w-5 h-5" />
             </button>
           )}
           <h1 className="text-2xl font-bold text-foreground">
             {accountInfo ? accountInfo.name : 'Transactions'}
+            {/* <span className="hidden min-[300px]:block text-[10px] sm:text-xs text-muted-foreground whitespace-nowrap shrink-0">{filtered.length} txn{filtered.length !== 1 ? 's' : ''}</span> */}
           </h1>
         </div>
         <div className="flex gap-2">
@@ -210,13 +211,13 @@ export default function Transactions() {
                   <X className="w-4 h-4" />
                 </Button>
               ) : (
-                <Button variant="ghost" size="icon" onClick={() => setShowSearch(true)} className="w-9 h-9" data-testid="search-mode-toggle">
+                <Button variant="ghost" size="icon" onClick={() => setShowSearch(true)} className="w-9 h-9 bg-muted rounded-full" data-testid="search-mode-toggle">
                   <Search className="w-4 h-4" />
                 </Button>
               )}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="w-9 h-9">
+                  <Button variant="ghost" size="icon" className="w-9 h-9 bg-muted rounded-full">
                     <MoreVertical className="w-5 h-5 text-foreground" />
                   </Button>
                 </DropdownMenuTrigger>
@@ -277,19 +278,19 @@ export default function Transactions() {
         <div className="flex w-full gap-2 overflow-x-auto pb-1">
           <Link
             href={accountId ? `/add-transaction?accountId=${accountId}&type=income` : `/add-transaction?type=income`}
-            className="flex-1 min-w-[100px] flex items-center justify-center gap-1.5 bg-green-500 hover:bg-green-600 text-white rounded-xl py-2 px-3 text-sm font-semibold transition-colors shadow-sm"
+            className="flex-1 min-w-[100px] flex items-center justify-center gap-1.5 bg-green-600 hover:bg-green-600 text-white rounded-xl py-2 px-3 text-sm font-semibold transition-colors shadow-sm"
           >
             Income
           </Link>
           <Link
             href={accountId ? `/add-transaction?accountId=${accountId}&type=expense` : `/add-transaction?type=expense`}
-            className="flex-1 min-w-[100px] flex items-center justify-center gap-1.5 bg-red-500 hover:bg-red-600 text-white rounded-xl py-2 px-3 text-sm font-semibold transition-colors shadow-sm"
+            className="flex-1 min-w-[100px] flex items-center justify-center gap-1.5 bg-red-600 hover:bg-red-600 text-white rounded-xl py-2 px-3 text-sm font-semibold transition-colors shadow-sm"
           >
             Expense
           </Link>
           <Link
             href={accountId ? `/add-transaction?accountId=${accountId}` : `/add-transaction`}
-            className="flex-1 min-w-[100px] flex items-center justify-center gap-1.5 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl py-2 px-3 text-sm font-semibold transition-colors shadow-sm"
+            className="flex-1 min-w-[100px] flex items-center justify-center gap-1.5 bg-green-900 hover:bg-primary/90 text-primary-foreground rounded-xl py-2 px-3 text-sm font-semibold transition-colors shadow-sm"
           >
             <Plus className="w-4 h-4" /> Add
           </Link>
@@ -350,7 +351,7 @@ export default function Transactions() {
                     {selected.has(tx.id) && <svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4l2.5 2.5L9 1" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>}
                   </div>
                 )}
-                <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${tx.type === 'income' ? 'bg-green-100 dark:bg-green-900/30' : 'bg-red-100 dark:bg-red-900/30'}`}>
+                <div className={`w-8 h-8 rounded-md flex items-center justify-center shrink-0 ${tx.type === 'income' ? 'bg-green-100 dark:bg-green-900/30' : 'bg-red-100 dark:bg-red-900/30'}`}>
                   {tx.type === 'income'
                     ? <ArrowUpCircle className="w-4 h-4 text-green-600 dark:text-green-400" />
                     : <ArrowDownCircle className="w-4 h-4 text-red-500 dark:text-red-400" />
@@ -360,8 +361,9 @@ export default function Transactions() {
                   <div className="flex items-center gap-2 mb-0.5">
                     <p className="text-sm font-semibold text-foreground truncate">{tx.description}</p>
                     {account?.name && (
-                      <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-secondary text-secondary-foreground shrink-0 leading-none">
-                        {account.name}
+                      <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-secondary text-secondary-foreground uppercase shrink-0 leading-none">
+                        {tx.paymentMode || 'UPI'}{" "}
+                        {/* - {account.name} */}
                       </span>
                     )}
                   </div>
@@ -416,18 +418,19 @@ export default function Transactions() {
             <div className="min-w-0 shrink-0">
               <p className="text-[10px] sm:text-xs text-muted-foreground leading-none mb-1">Balance</p>
               <p className={`text-xs sm:text-sm font-bold truncate ${totalIncome - totalExpense >= 0 ? 'text-primary' : 'text-red-500 dark:text-red-400'}`}>
-                {totalIncome - totalExpense >= 0 ? '+' : ''}{formatCurrency(totalIncome - totalExpense, currency)}
+                {/* {totalIncome - totalExpense >= 0 ? '+' : ''} */}
+                {formatCurrency(totalIncome - totalExpense, currency)}
               </p>
             </div>
 
-            <span className="hidden min-[500px]:block text-[10px] sm:text-xs text-muted-foreground ml-auto whitespace-nowrap shrink-0">{filtered.length} txn{filtered.length !== 1 ? 's' : ''}</span>
+            <span className="hidden min-[300px]:block text-[10px] sm:text-xs text-muted-foreground whitespace-nowrap shrink-0">{filtered.length} txn{filtered.length !== 1 ? 's' : ''}</span>
           </div>
         </div>
       </div>
 
       {/* Delete Dialog */}
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <DialogContent>
+        <DialogContent className="rounded-2xl">
           <DialogHeader>
             <DialogTitle>Delete {deleteTarget ? 'Transaction' : `${selected.size} Transactions`}</DialogTitle>
           </DialogHeader>
@@ -436,9 +439,9 @@ export default function Transactions() {
               ? 'Are you sure you want to delete this transaction? This will also adjust the account balance.'
               : `Are you sure you want to delete ${selected.size} transactions? Account balances will be adjusted.`}
           </p>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
-            <Button variant="destructive" onClick={doDelete} data-testid="confirm-delete">Delete</Button>
+          <DialogFooter className="flex flex-row justify-center gap-2">
+            <Button className="w-1/2" variant="outline" onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
+            <Button className="w-1/2" variant="destructive" onClick={doDelete} data-testid="confirm-delete">Delete</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
