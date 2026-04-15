@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Plus, Trash2, Check, StickyNote, ListTodo, Bell, BellOff, Folder, ChevronLeft } from "lucide-react";
+import { Plus, Trash2, Check, StickyNote, ListTodo, Bell, BellOff, Folder, ChevronLeft, Edit2 } from "lucide-react";
 import { storage, migrateFolders, generateId, type Note, type Todo, type NoteFolder, type TodoFolder } from "@/lib/storage";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,11 +15,11 @@ export default function Notes() {
   const [todoFolders, setTodoFolders] = useState<TodoFolder[]>([]);
   const [notes, setNotes] = useState<Note[]>([]);
   const [todos, setTodos] = useState<Todo[]>([]);
-  
+
   const [activeNoteFolderId, setActiveNoteFolderId] = useState<string | null>(null);
   const [activeTodoFolderId, setActiveTodoFolderId] = useState<string | null>(null);
 
-  const [folderDialog, setFolderDialog] = useState<{ open: boolean, type: 'note' | 'todo' }>({ open: false, type: 'note' });
+  const [folderDialog, setFolderDialog] = useState<{ open: boolean, type: 'note' | 'todo', editId?: string }>({ open: false, type: 'note' });
   const [folderName, setFolderName] = useState('');
   const [deleteFolderId, setDeleteFolderId] = useState<{ id: string, type: 'note' | 'todo' } | null>(null);
 
@@ -29,7 +29,7 @@ export default function Notes() {
   const [todoInput, setTodoInput] = useState('');
   const [todoDueDate, setTodoDueDate] = useState('');
   const [deleteNoteId, setDeleteNoteId] = useState<string | null>(null);
-  
+
   const { toast } = useToast();
 
   const load = () => {
@@ -45,13 +45,22 @@ export default function Notes() {
   const saveFolder = () => {
     if (!folderName.trim()) return;
     const now = new Date().toISOString();
-    const newFolder = { id: generateId(), name: folderName.trim(), createdAt: now };
-    
-    if (folderDialog.type === 'note') {
-      storage.setNoteFolders([...noteFolders, newFolder]);
+
+    if (folderDialog.editId) {
+      if (folderDialog.type === 'note') {
+        storage.setNoteFolders(noteFolders.map(f => f.id === folderDialog.editId ? { ...f, name: folderName.trim() } : f));
+      } else {
+        storage.setTodoFolders(todoFolders.map(f => f.id === folderDialog.editId ? { ...f, name: folderName.trim() } : f));
+      }
     } else {
-      storage.setTodoFolders([...todoFolders, newFolder]);
+      const newFolder = { id: generateId(), name: folderName.trim(), createdAt: now };
+      if (folderDialog.type === 'note') {
+        storage.setNoteFolders([...noteFolders, newFolder]);
+      } else {
+        storage.setTodoFolders([...todoFolders, newFolder]);
+      }
     }
+
     setFolderDialog({ open: false, type: 'note' });
     setFolderName('');
     load();
@@ -170,17 +179,22 @@ export default function Notes() {
         <div>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             {noteFolders.map(folder => {
-               const count = notes.filter(n => n.folderId === folder.id).length;
-               return (
-                 <div key={folder.id} onClick={() => setActiveNoteFolderId(folder.id)} className="bg-card border border-card-border rounded-2xl p-4 shadow-sm cursor-pointer hover:shadow-md transition-all group relative">
-                   <button onClick={(e) => { e.stopPropagation(); setDeleteFolderId({ id: folder.id, type: 'note' }) }} className="absolute top-2 right-2 p-1.5 rounded-lg text-muted-foreground/50 hover:text-destructive hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors">
-                     <Trash2 className="w-4 h-4" />
-                   </button>
-                   <Folder className="w-8 h-8 text-primary mb-3" />
-                   <h3 className="font-semibold text-foreground text-sm truncate">{folder.name}</h3>
-                   <p className="text-xs text-muted-foreground mt-1">{count} note{count !== 1 ? 's' : ''}</p>
-                 </div>
-               );
+              const count = notes.filter(n => n.folderId === folder.id).length;
+              return (
+                <div key={folder.id} onClick={() => setActiveNoteFolderId(folder.id)} className="bg-card border border-card-border rounded-2xl p-4 shadow-sm cursor-pointer hover:shadow-md transition-all group relative">
+                  <div className="absolute top-2 right-2 flex gap-1">
+                    <button onClick={(e) => { e.stopPropagation(); setFolderName(folder.name); setFolderDialog({ open: true, type: 'note', editId: folder.id }); }} className="p-1.5 rounded-lg text-muted-foreground/50 hover:text-primary hover:bg-primary/10 transition-colors">
+                      <Edit2 className="w-4 h-4" />
+                    </button>
+                    <button onClick={(e) => { e.stopPropagation(); setDeleteFolderId({ id: folder.id, type: 'note' }) }} className="p-1.5 rounded-lg text-muted-foreground/50 hover:text-destructive hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors">
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                  <Folder className="w-8 h-8 text-primary mb-3" />
+                  <h3 className="font-semibold text-foreground text-sm truncate">{folder.name}</h3>
+                  <p className="text-xs text-muted-foreground mt-1">{count} note{count !== 1 ? 's' : ''}</p>
+                </div>
+              );
             })}
           </div>
           {noteFolders.length === 0 && (
@@ -237,17 +251,22 @@ export default function Notes() {
         <div>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             {visibleTodoFolders.map(folder => {
-               const count = todos.filter(t => t.folderId === folder.id && !t.completed).length;
-               return (
-                 <div key={folder.id} onClick={() => setActiveTodoFolderId(folder.id)} className="bg-card border border-card-border rounded-2xl p-4 shadow-sm cursor-pointer hover:shadow-md transition-all group relative">
-                   <button onClick={(e) => { e.stopPropagation(); setDeleteFolderId({ id: folder.id, type: 'todo' }) }} className="absolute top-2 right-2 p-1.5 rounded-lg text-muted-foreground/50 hover:text-destructive hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors">
-                     <Trash2 className="w-4 h-4" />
-                   </button>
-                   <ListTodo className="w-8 h-8 text-primary mb-3" />
-                   <h3 className="font-semibold text-foreground text-sm truncate">{folder.name}</h3>
-                   <p className="text-xs text-muted-foreground mt-1">{count} pending</p>
-                 </div>
-               );
+              const count = todos.filter(t => t.folderId === folder.id && !t.completed).length;
+              return (
+                <div key={folder.id} onClick={() => setActiveTodoFolderId(folder.id)} className="bg-card border border-card-border rounded-2xl p-4 shadow-sm cursor-pointer hover:shadow-md transition-all group relative">
+                  <div className="absolute top-2 right-2 flex gap-1">
+                    <button onClick={(e) => { e.stopPropagation(); setFolderName(folder.name); setFolderDialog({ open: true, type: 'todo', editId: folder.id }); }} className="p-1.5 rounded-lg text-muted-foreground/50 hover:text-primary hover:bg-primary/10 transition-colors">
+                      <Edit2 className="w-4 h-4" />
+                    </button>
+                    <button onClick={(e) => { e.stopPropagation(); setDeleteFolderId({ id: folder.id, type: 'todo' }) }} className="p-1.5 rounded-lg text-muted-foreground/50 hover:text-destructive hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors">
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                  <ListTodo className="w-8 h-8 text-primary mb-3" />
+                  <h3 className="font-semibold text-foreground text-sm truncate">{folder.name}</h3>
+                  <p className="text-xs text-muted-foreground mt-1">{count} pending</p>
+                </div>
+              );
             })}
           </div>
           {visibleTodoFolders.length === 0 && (
@@ -341,17 +360,17 @@ export default function Notes() {
       )}
 
       {/* Create Folder Dialog */}
-      <Dialog open={folderDialog.open} onOpenChange={(v) => { if(!v) setFolderDialog({ ...folderDialog, open: false }) }}>
+      <Dialog open={folderDialog.open} onOpenChange={(v) => { if (!v) setFolderDialog({ ...folderDialog, open: false }) }}>
         <DialogContent className="max-w-sm rounded-2xl">
-          <DialogHeader><DialogTitle>New {folderDialog.type === 'note' ? 'Folder' : 'List'}</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>{folderDialog.editId ? 'Edit' : 'New'} {folderDialog.type === 'note' ? 'Folder' : 'List'}</DialogTitle></DialogHeader>
           <Input placeholder="Name..." value={folderName} onChange={e => setFolderName(e.target.value)} autoFocus />
           <DialogFooter className="flex flex-row justify-center gap-2">
             <Button className="w-1/2" variant="outline" onClick={() => setFolderDialog({ ...folderDialog, open: false })}>Cancel</Button>
-            <Button className="w-1/2" onClick={saveFolder}>Create</Button>
+            <Button className="w-1/2" onClick={saveFolder}>{folderDialog.editId ? 'Save' : 'Create'}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      
+
       {/* Delete Folder Dialog */}
       <Dialog open={!!deleteFolderId} onOpenChange={() => setDeleteFolderId(null)}>
         <DialogContent className="rounded-2xl max-w-sm">
@@ -366,13 +385,13 @@ export default function Notes() {
 
       {/* Note Edit Dialog */}
       <Dialog open={noteDialog} onOpenChange={setNoteDialog}>
-        <DialogContent className="max-w-lg rounded-2xl">
+        <DialogContent className="max-w-lg rounded-2xl w-[90vw] sm:w-[80vw] h-[80vh] flex flex-col">
           <DialogHeader><DialogTitle>{editNote ? 'Edit Note' : 'New Note'}</DialogTitle></DialogHeader>
-          <div className="space-y-3">
+          <div className="flex flex-col flex-1 space-y-3 min-h-0 mt-2">
             <Input placeholder="Title" value={noteForm.title} onChange={e => setNoteForm(f => ({ ...f, title: e.target.value }))} />
-            <Textarea placeholder="Write your note here..." value={noteForm.body} onChange={e => setNoteForm(f => ({ ...f, body: e.target.value }))} rows={8} />
+            <Textarea className="flex-1 resize-none" placeholder="Write your note here..." value={noteForm.body} onChange={e => setNoteForm(f => ({ ...f, body: e.target.value }))} />
           </div>
-          <DialogFooter className="flex flex-row justify-center gap-2">
+          <DialogFooter className="flex flex-row justify-center gap-2 mt-4">
             <Button className="w-1/2" variant="outline" onClick={() => setNoteDialog(false)}>Cancel</Button>
             <Button className="w-1/2" onClick={saveNote}>Save Note</Button>
           </DialogFooter>
